@@ -12,10 +12,12 @@
 #     Workflow name:    yayinla.yml
 #     Environment name: pypi
 #
-# Sonrasinda yayin: `git tag v0.1.0 && git push origin v0.1.0`
-#
-# Elle tetiklendiginde varsayilan olarak YALNIZCA paketler ve dogrular;
-# gercekten yayinlamak icin `yayinla` kutusu isaretlenmelidir.
+# Etiket atmak paketi URETIR ve DOGRULAR; PyPI'a yukleme adimi bilerek
+# elle tetiklenir, cunku bekleyen yayinci tanimlanmadan once etiket atmak
+# kirmizi bir kosu birakiyordu. Yayinci tanimlandiktan sonra yayin:
+#   Actions -> Yayinla -> Run workflow -> `yayinla` kutusunu isaretle
+# Otomatik yayini geri istersen `yayinla` isindeki `if:` satirini
+# `github.event_name == 'push' || inputs.yayinla` olarak geri al.
 
 name: Yayinla
 
@@ -65,7 +67,7 @@ jobs:
   yayinla:
     name: PyPI
     needs: paketle
-    if: github.event_name == 'push' || inputs.yayinla
+    if: inputs.yayinla
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
