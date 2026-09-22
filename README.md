@@ -131,6 +131,7 @@ repo-vet psf/requests --skip web          # skip the slow outbound-link pass
 repo-vet OWNER/NAME --only install,links  # just the two that break most often
 repo-vet OWNER/NAME --json                # machine-readable
 repo-vet OWNER/NAME --markdown            # a GitHub step summary
+repo-vet OWNER/NAME --json-out r.json --markdown   # both, from one scan
 ```
 
 A token is optional for public repositories. `--token`, `GITHUB_TOKEN` or
@@ -150,6 +151,15 @@ Warnings never fail a run on their own — `--fail-on any` if you want them to.
 The action writes the findings into the job summary and installs the tool from
 its own checkout, so the version you pin is the version that runs. This
 repository's own CI does exactly this, against itself.
+
+It scans **once**. That is worth saying because it used to scan three times —
+once for the JSON, once for the summary, once for the exit code — and each pass
+re-checked every outbound link. The cost was the smaller problem: three passes
+over a flaky network can disagree, so the summary could report zero findings
+while the third pass failed the job, and nothing in the output would explain it.
+`--json-out` writes the machine-readable report alongside whatever the console
+is producing, so the count, the summary and the exit code all come from one
+measurement.
 
 ## What it will not do
 

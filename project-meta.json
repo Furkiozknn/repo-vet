@@ -49,9 +49,10 @@
     "videos": []
   },
   "tests": {
-    "count": 97,
-    "source": "CI log: `=== 97 tests passed ===`",
-    "measured": "2026-09-22"
+    "count": 103,
+    "framework": "unittest via pytest",
+    "command": "python3 -m pytest tests -q",
+    "evidence": "103 passed"
   },
   "ci": {
     "workflows": [

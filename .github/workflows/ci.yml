@@ -60,6 +60,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./
+      - id: vet
+        uses: ./
         with:
           fail-on: error
+      # The action reports a count and an exit code, and they have to come
+      # from the same scan. They used to come from different ones, which is
+      # how a summary saying "no findings" could sit next to a failed job.
+      - name: The count the action reported agrees with the job passing
+        run: |
+          set -eu
+          echo "findings=${{ steps.vet.outputs.findings }}"
+          test -n "${{ steps.vet.outputs.findings }}"
+          test -f repo-vet.json
+          python3 - <<'PY'
+          import json
+          d = json.load(open("repo-vet.json", encoding="utf-8"))
+          errors = sum(len([f for f in r["findings"] if f["level"] == "error"]) for r in d)
+          assert errors == 0, "the step passed with %d errors in its own report" % errors
+          print("report and exit code agree: 0 errors")
+          PY

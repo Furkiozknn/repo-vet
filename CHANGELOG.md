@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `--json-out PATH` writes the machine-readable report to a file while the
+  console keeps whatever it was producing — text, `--markdown`, either.
+
+### Changed
+
+- **The GitHub Action now scans once instead of three times.** It used to run
+  the tool once for the JSON, once for the job summary and once for the exit
+  code, and every pass re-checked all the outbound links. The cost was the
+  smaller half of the problem: three passes over a flaky network can disagree,
+  so the summary could say "no findings" while the third pass failed the job,
+  with nothing in the output to explain the contradiction. One pass now
+  produces the file, the summary and the exit code.
+
 Format close to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow [Semantic Versioning](https://semver.org/).
 

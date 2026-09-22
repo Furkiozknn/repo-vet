@@ -63,15 +63,19 @@ runs:
         if [ -n "${{ inputs.only }}" ]; then bayrak="$bayrak --only ${{ inputs.only }}"; fi
         if [ -n "${{ inputs.skip }}" ]; then bayrak="$bayrak --skip ${{ inputs.skip }}"; fi
 
+        # TEK tarama. Once uc kosu vardi -- biri JSON icin, biri adim ozeti
+        # icin, biri cikis kodu icin -- ve her biri dis baglantilari ayri ayri
+        # deniyordu. Yavaslik ikincildi; asil sorun ucunun birbiriyle
+        # celisebilmesiydi: cikti "0 bulgu" derken ucuncu kosu kirmizi
+        # yanabilirdi. --json-out ayni kosunun raporunu dosyaya da yaziyor,
+        # boylece sayi, ozet ve cikis kodu ayni olcumden geliyor.
         repo-vet "${{ inputs.repository }}" $bayrak \
-          --web-limit "${{ inputs.web-limit }}" --json > repo-vet.json
-        repo-vet "${{ inputs.repository }}" $bayrak \
-          --web-limit "${{ inputs.web-limit }}" --markdown --fail-on none \
-          >> "$GITHUB_STEP_SUMMARY"
+          --web-limit "${{ inputs.web-limit }}" \
+          --json-out repo-vet.json --markdown \
+          --fail-on "${{ inputs.fail-on }}" >> "$GITHUB_STEP_SUMMARY"
+        kod=$?
 
         sayi=$(python3 -c "import json;print(sum(r['finding_count'] for r in json.load(open('repo-vet.json'))))")
         echo "findings=$sayi" >> "$GITHUB_OUTPUT"
 
-        repo-vet "${{ inputs.repository }}" $bayrak \
-          --web-limit "${{ inputs.web-limit }}" \
-          --fail-on "${{ inputs.fail-on }}"
+        exit "$kod"

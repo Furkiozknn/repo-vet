@@ -28,6 +28,9 @@ def _parser():
                    help="run only these checks (comma separated): " + ", ".join(CHECK_NAMES))
     p.add_argument("--skip", default=None, help="skip these checks (comma separated)")
     p.add_argument("--json", action="store_true", help="machine-readable output")
+    p.add_argument("--json-out", dest="json_out", default=None, metavar="PATH",
+                   help="also write the machine-readable report to this file, "
+                        "whatever the console output is")
     p.add_argument("--markdown", action="store_true",
                    help="GitHub step-summary output")
     p.add_argument("--web-limit", type=int, default=40,
@@ -80,6 +83,22 @@ def main(argv=None):
             return 2
         raporlar.append(vet(slug, client, only=_liste(args.only),
                             skip=_liste(args.skip), web_limit=args.web_limit))
+
+    # One scan, one truth. Writing the machine-readable report to a file
+    # alongside whatever the console gets means a caller no longer has to run
+    # the tool three times to get JSON, a summary and an exit code - and three
+    # runs against a flaky network could disagree with each other, which is a
+    # worse failure than being slow.
+    if args.json_out:
+        import json
+        try:
+            with open(args.json_out, "w", encoding="utf-8") as f:
+                json.dump([r.as_dict() for r in raporlar], f, indent=2,
+                          ensure_ascii=False)
+                f.write("\n")
+        except OSError as e:
+            sys.stderr.write("cannot write %s: %s\n" % (args.json_out, e))
+            return 2
 
     if args.json:
         import json

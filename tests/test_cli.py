@@ -138,3 +138,67 @@ class OutputFormats(unittest.TestCase):
 
 if __name__ == "__main__":                                # pragma: no cover
     unittest.main(verbosity=2)
+
+
+class JsonOutTestleri(unittest.TestCase):
+    """`--json-out`: bir tarama, tek gerçek.
+
+    Bu bayrak eklenmeden önce GitHub Action aynı taramayı üç kez koşuyordu --
+    bir kez JSON için, bir kez adım özeti için, bir kez de çıkış kodu için.
+    Üç koşu ağ üzerinden bağlantı denetimi yaptığı için birbiriyle
+    çelişebiliyordu: rapor "0 bulgu" derken üçüncü koşu kırmızı yanabilirdi.
+    Yavaş olması ikincil; asıl sorun üç farklı cevabın mümkün olmasıydı.
+    """
+
+    def setUp(self):
+        import tempfile
+        self.dizin = tempfile.mkdtemp()
+        self.yol = os.path.join(self.dizin, "rapor.json")
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.dizin, ignore_errors=True)
+
+    def test_dosyaya_yazarken_konsola_metin_basiyor(self):
+        kod, cikti = _yamalali(_hatali(), ["o/r", "--json-out", self.yol])
+        self.assertEqual(kod, 1)
+        self.assertNotIn("{", cikti.split("\n")[0])
+        with open(self.yol, encoding="utf-8") as f:
+            veri = json.load(f)
+        self.assertEqual(veri[0]["repository"], "o/r")
+        self.assertEqual(veri[0]["finding_count"], 1)
+
+    def test_markdown_ile_birlikte_calisiyor(self):
+        kod, cikti = _yamalali(_hatali(), ["o/r", "--json-out", self.yol, "--markdown"])
+        self.assertEqual(kod, 1)
+        self.assertIn("#", cikti)
+        with open(self.yol, encoding="utf-8") as f:
+            self.assertEqual(json.load(f)[0]["finding_count"], 1)
+
+    def test_cikis_kodu_ayni_taramadan_geliyor(self):
+        """Dosyadaki sayı ile çıkış kodu aynı koşudan çıkmalı."""
+        kod, _ = _yamalali(_hatali(), ["o/r", "--json-out", self.yol, "--fail-on", "none"])
+        self.assertEqual(kod, 0)
+        with open(self.yol, encoding="utf-8") as f:
+            self.assertEqual(json.load(f)[0]["finding_count"], 1)
+
+    def test_temiz_depoda_da_dosya_yaziliyor(self):
+        r = Report("o/r", checked=["install"])
+        kod, _ = _yamalali(r, ["o/r", "--json-out", self.yol])
+        self.assertEqual(kod, 0)
+        with open(self.yol, encoding="utf-8") as f:
+            veri = json.load(f)
+        self.assertEqual(veri[0]["finding_count"], 0)
+
+    def test_yazilamayan_yol_sessizce_gecmiyor(self):
+        hedef = os.path.join(self.dizin, "olmayan-klasor", "rapor.json")
+        eski = io.StringIO()
+        with contextlib.redirect_stderr(eski):
+            kod, _ = _yamalali(_hatali(), ["o/r", "--json-out", hedef])
+        self.assertEqual(kod, 2)
+        self.assertIn("cannot write", eski.getvalue())
+
+    def test_bayrak_verilmezse_hicbir_dosya_yazilmiyor(self):
+        kod, _ = _yamalali(_hatali(), ["o/r"])
+        self.assertEqual(kod, 1)
+        self.assertFalse(os.path.exists(self.yol))
