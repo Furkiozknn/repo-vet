@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.0.0",
+  "id": "repo-vet",
+  "owner": "Furkiozknn",
+  "repository": "https://github.com/Furkiozknn/repo-vet",
+  "homepage": null,
+  "releases": "https://github.com/Furkiozknn/repo-vet/releases",
+  "status": "active",
+  "category": "developer-tool",
+  "platform": [
+    "cli",
+    "github-actions"
+  ],
+  "primary_language": "Python",
+  "technologies": [
+    "Python 3.9+",
+    "GitHub REST API",
+    "standard library only"
+  ],
+  "version": "0.1.0",
+  "license": "MIT",
+  "topics": [
+    "ci",
+    "cli",
+    "developer-tools",
+    "documentation",
+    "github",
+    "github-actions",
+    "link-checker",
+    "linter",
+    "python",
+    "quality-assurance",
+    "readme",
+    "release-automation"
+  ],
+  "summary": "Checks what a GitHub repository claims about itself - install commands, badges, links, releases, published sites - against what is actually there. Six checks over the GitHub API, no clone, zero dependencies.",
+  "key_features": [
+    "Checks a README's install commands against PyPI and npm, so the first command a visitor runs is one that still resolves",
+    "Only fenced code blocks count as instructions: a sentence mentioning a command is discussing it, not asking anyone to run it",
+    "Reports 404 and 410 but never a 403 or a timeout - unreachable is not broken, and a check that cannot see is recorded as not run, not as clean",
+    "Works over the GitHub API without cloning, and ships a composite Action that installs from its own checkout"
+  ],
+  "media": {
+    "hero": null,
+    "screenshots": [],
+    "gifs": [],
+    "videos": []
+  },
+  "tests": {
+    "count": 71,
+    "source": "CI log: `=== 71 tests passed ===`",
+    "measured": "2026-09-22"
+  },
+  "ci": {
+    "workflows": [
+      "ci.yml",
+      "yayinla.yml"
+    ],
+    "badge": "https://github.com/Furkiozknn/repo-vet/actions/workflows/ci.yml/badge.svg"
+  },
+  "docs": {
+    "readme": "README.md",
+    "changelog": "CHANGELOG.md",
+    "version_history": null,
+    "roadmap": null,
+    "security": null,
+    "contributing": null,
+    "license_file": "LICENSE"
+  },
+  "social": {
+    "headline": "Your README is a promise. This checks whether you can still keep it.",
+    "hashtags": [
+      "python",
+      "github",
+      "devtools",
+      "opensource"
+    ],
+    "primary_link": "https://github.com/Furkiozknn/repo-vet"
+  },
+  "provenance": {
+    "generated_at": "2026-09-22",
+    "generator": "schema/uret.py",
+    "rule": "mechanical fields read from the repository and the GitHub API; editorial fields hand-written and reviewed; no field is generated from a guess"
+  }
+}
