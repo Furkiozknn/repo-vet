@@ -188,3 +188,14 @@ because somebody else's repository changed is a suite people learn to ignore.
 ## Licence
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+## More from this ecosystem
+
+- **[godot-refcheck](https://github.com/Furkiozknn/godot-refcheck)** — finds broken references and dead signals in Godot projects, and repairs them
+- **[mcp-vet](https://github.com/Furkiozknn/mcp-vet)** — audits an MCP server's source before you install it
+- **[claude-code-intelligence](https://github.com/Furkiozknn/claude-code-intelligence)** — where the tokens went and when the quota resets, locally
+- **[ai-workflow-engine](https://github.com/Furkiozknn/ai-workflow-engine)** — pipelines as plain YAML DAGs, validated before they run
+
+<sub>All of them in one searchable page: **[furkiozknn.github.io](https://furkiozknn.github.io/)** — each card is generated from that repository's own <code>project-meta.json</code>.</sub>
