@@ -1,0 +1,65 @@
+name: CI
+
+# Three things run here, and the third one is the point of the project:
+#   1. the suite, on every supported Python
+#   2. the package actually builds and passes twine's metadata check
+#   3. repo-vet runs against its OWN repository
+#
+# The third is not a stunt. A tool that checks whether a README's promises
+# hold has no business shipping a README whose promises do not.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: tests (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      # No dependencies to install: the suite is standard library only and
+      # never touches the network, so it runs the same on a train.
+      - name: Run the suite
+        run: |
+          set -euo pipefail
+          PYTHONPATH=. python -m unittest discover -s tests -p "test_*.py" -v 2>&1 | tee ciktisi.txt
+          echo "=== $(grep -c '\.\.\. ok' ciktisi.txt) tests passed ==="
+
+  package:
+    name: package builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+      - run: uv build
+      - run: uvx twine check dist/*
+      - run: |
+          set -euo pipefail
+          python3 -c "import zipfile,glob;w=glob.glob('dist/*.whl')[0];print(w);print(zipfile.ZipFile(w).read([n for n in zipfile.ZipFile(w).namelist() if n.endswith('METADATA')][0]).decode()[:600])"
+
+  self:
+    name: vets itself
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          fail-on: error

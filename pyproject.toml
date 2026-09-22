@@ -1,0 +1,49 @@
+[project]
+name = "repo-vet"
+version = "0.1.0"
+description = "Checks what a GitHub repository claims about itself against what is actually there."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Furkiozknn" }]
+keywords = [
+  "github", "readme", "documentation", "linter", "ci",
+  "link-checker", "release-automation", "developer-tools",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Quality Assurance",
+]
+# No runtime dependencies, on purpose: a tool that audits other projects'
+# supply chain has no business widening your own.
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/Furkiozknn/repo-vet"
+Source = "https://github.com/Furkiozknn/repo-vet"
+Changelog = "https://github.com/Furkiozknn/repo-vet/blob/main/CHANGELOG.md"
+
+[project.scripts]
+repo-vet = "repo_vet.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["repo_vet"]
+
+[tool.hatch.build.targets.sdist]
+include = ["repo_vet", "tests", "README.md", "LICENSE", "CHANGELOG.md"]

@@ -1,0 +1,75 @@
+name: "repo-vet"
+description: "Fail the build when the README promises something the repository cannot deliver."
+author: "Furkiozknn"
+
+branding:
+  icon: "check-circle"
+  color: "green"
+
+inputs:
+  repository:
+    description: "Repository to check, as owner/name. Defaults to the one running the workflow."
+    required: false
+    default: ${{ github.repository }}
+  token:
+    description: "Token used for the GitHub API. The default job token is enough for a public repository."
+    required: false
+    default: ${{ github.token }}
+  only:
+    description: "Run only these checks (comma separated): install, links, badges, release, web, pages."
+    required: false
+    default: ""
+  skip:
+    description: "Skip these checks (comma separated)."
+    required: false
+    default: ""
+  fail-on:
+    description: "error (default), any, or none."
+    required: false
+    default: "error"
+  web-limit:
+    description: "How many outbound links to try."
+    required: false
+    default: "40"
+
+outputs:
+  findings:
+    description: "Number of findings."
+    value: ${{ steps.vet.outputs.findings }}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    # Installed from the action's own checkout, so this works whether or not
+    # repo-vet is on PyPI, and the version you pinned is the version that runs.
+    - name: Install repo-vet
+      shell: bash
+      run: python3 -m pip install --quiet "${{ github.action_path }}"
+
+    - name: Vet
+      id: vet
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+      run: |
+        set -uo pipefail
+        bayrak=""
+        [ -n "${{ inputs.only }}" ] && bayrak="$bayrak --only ${{ inputs.only }}"
+        [ -n "${{ inputs.skip }}" ] && bayrak="$bayrak --skip ${{ inputs.skip }}"
+
+        repo-vet "${{ inputs.repository }}" $bayrak \
+          --web-limit "${{ inputs.web-limit }}" --json > repo-vet.json
+        repo-vet "${{ inputs.repository }}" $bayrak \
+          --web-limit "${{ inputs.web-limit }}" --markdown --fail-on none \
+          >> "$GITHUB_STEP_SUMMARY"
+
+        sayi=$(python3 -c "import json;print(sum(r['finding_count'] for r in json.load(open('repo-vet.json'))))")
+        echo "findings=$sayi" >> "$GITHUB_OUTPUT"
+
+        repo-vet "${{ inputs.repository }}" $bayrak \
+          --web-limit "${{ inputs.web-limit }}" \
+          --fail-on "${{ inputs.fail-on }}"

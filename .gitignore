@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+repo-vet.json
+
+# Sirlar asla girmesin
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!*.pub
+.netrc
+.pypirc
+credentials.json
+secrets.json
