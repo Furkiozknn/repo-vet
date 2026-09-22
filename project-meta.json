@@ -41,9 +41,11 @@
     "Checked against 30 public repositories that disagree with each other; every false positive it produced is now a named test"
   ],
   "media": {
-    "hero": null,
+    "hero": "assets/banner.svg",
     "screenshots": [],
-    "gifs": [],
+    "gifs": [
+      "assets/demo.gif"
+    ],
     "videos": []
   },
   "tests": {

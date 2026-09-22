@@ -1,11 +1,18 @@
+![repo-vet - checks what a GitHub repository claims about itself: install commands, badges, links, releases and published sites](assets/banner.svg)
+
 # repo-vet
 
 **Your README is a promise. This checks whether you can still keep it.**
 
 [![CI](https://github.com/Furkiozknn/repo-vet/actions/workflows/ci.yml/badge.svg)](https://github.com/Furkiozknn/repo-vet/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Furkiozknn/repo-vet?label=release&color=c9a961)](https://github.com/Furkiozknn/repo-vet/releases/latest)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![No dependencies](https://img.shields.io/badge/dependencies-none-lightgrey)](pyproject.toml)
+
+![repo-vet checking fastapi, requests and godot-refcheck: one finding in fastapi, the other two clean](assets/demo.gif)
+
+<sub>One real run, three repositories that are not mine to fix. <code>tiangolo/fastapi</code>'s README links to <code>tutorial/</code>, which 404s on GitHub — reported as a warning, because on the documentation site it is a live route and that is the author's call. The other two answer every check.</sub>
 
 `pip install thing` promises the distribution exists. A workflow badge promises
 the workflow exists and has run. A relative link promises the file is in the
@@ -31,7 +38,7 @@ That is real output, not a mock-up.
 
 | | |
 |---|---|
-| Version | 0.2.0 |
+| Version | 0.1.0 |
 | Python | 3.9 – 3.13 |
 | Runtime dependencies | none |
 | Tests | 97, offline |

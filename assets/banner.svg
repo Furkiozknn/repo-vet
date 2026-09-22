@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 250" width="1200" height="250" role="img" aria-label="repo-vet - checks a README&#39;s install commands, badges, links and release chain over the GitHub API">
+<defs>
+  <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#17161d"/><stop offset="58%" stop-color="#0e0d12"/><stop offset="100%" stop-color="#0b0b0f"/>
+  </linearGradient>
+  <linearGradient id="name" x1="0%" y1="0%" x2="100%" y2="0%">
+    <stop offset="0%" stop-color="#f2efe6"/><stop offset="62%" stop-color="#e7dcc0"/><stop offset="100%" stop-color="#c9a961"/>
+  </linearGradient>
+  <linearGradient id="hair" x1="0%" y1="0%" x2="100%" y2="0%">
+    <stop offset="0%" stop-color="#c9a961" stop-opacity="0.5"/><stop offset="100%" stop-color="#c9a961" stop-opacity="0"/>
+  </linearGradient>
+  <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+    <feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+</defs>
+<rect width="1200" height="250" fill="url(#bg)"/>
+
+<text x="54" y="96" font-family="'Cascadia Code','JetBrains Mono','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-weight="700" font-size="52" fill="url(#name)" letter-spacing="-1">repo-vet</text>
+<text x="56" y="132" font-family="'Segoe UI',Verdana,Helvetica,sans-serif" font-size="17" fill="#c7c2b6" opacity="0.92">Your README is a promise. This checks whether you can still keep it.</text>
+<line x1="56" y1="152" x2="330" y2="152" stroke="url(#hair)" stroke-width="1.5"/>
+<rect x="56" y="176" width="84" height="26" rx="13" fill="#141419" stroke="#4ade9e" stroke-opacity="0.45"/>
+<text x="98" y="193" text-anchor="middle" font-family="'Cascadia Code','JetBrains Mono','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="12" fill="#4ade9e">97 tests</text>
+<rect x="150" y="176" width="150" height="26" rx="13" fill="#141419" stroke="#c9a961" stroke-opacity="0.45"/>
+<text x="225" y="193" text-anchor="middle" font-family="'Cascadia Code','JetBrains Mono','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="12" fill="#c9a961">zero dependencies</text>
+<rect x="310" y="176" width="208" height="26" rx="13" fill="#141419" stroke="#6cb6ff" stroke-opacity="0.45"/>
+<text x="414" y="193" text-anchor="middle" font-family="'Cascadia Code','JetBrains Mono','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="12" fill="#6cb6ff">no clone, GitHub API only</text>
+<text x="764" y="74" font-family="'Cascadia Code','JetBrains Mono','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="13" fill="#4a4a55" text-anchor="end">install</text>
+<line x1="776" y1="60" x2="776" y2="82" stroke="#2a2a33"/>
+<text x="790" y="74" font-family="'Cascadia Code','JetBrains Mono','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="13" fill="#ff5f5f">pip install thing</text>
+<circle cx="700" cy="70" r="3" fill="#ff5f5f" filter="url(#glow)"/>
+<text x="764" y="108" font-family="'Cascadia Code','JetBrains Mono','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="13" fill="#4a4a55" text-anchor="end">badge</text>
+<line x1="776" y1="94" x2="776" y2="116" stroke="#2a2a33"/>
+<text x="790" y="108" font-family="'Cascadia Code','JetBrains Mono','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="13" fill="#d7d75f">workflow renamed, badge blank</text>
+<circle cx="700" cy="104" r="3" fill="#d7d75f" filter="url(#glow)"/>
+<text x="764" y="142" font-family="'Cascadia Code','JetBrains Mono','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="13" fill="#4a4a55" text-anchor="end">link</text>
+<line x1="776" y1="128" x2="776" y2="150" stroke="#2a2a33"/>
+<text x="790" y="142" font-family="'Cascadia Code','JetBrains Mono','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="13" fill="#ff5f5f">docs/getting-started.md</text>
+<circle cx="700" cy="138" r="3" fill="#ff5f5f" filter="url(#glow)"/>
+<text x="764" y="176" font-family="'Cascadia Code','JetBrains Mono','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="13" fill="#4a4a55" text-anchor="end">release</text>
+<line x1="776" y1="162" x2="776" y2="184" stroke="#2a2a33"/>
+<text x="790" y="176" font-family="'Cascadia Code','JetBrains Mono','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="13" fill="#d7d75f">tag has no Release</text>
+<circle cx="700" cy="172" r="3" fill="#d7d75f" filter="url(#glow)"/>
+</svg>
