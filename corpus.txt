@@ -1,0 +1,54 @@
+# The repositories repo-vet is checked against before a release.
+#
+# They are here because they disagree with each other: Python and Rust and
+# Go and TypeScript, monorepos and single crates, documentation repositories
+# with no code, a repository with no releases at all, a tree too large for
+# GitHub to return whole, a private one, an archived one, and one that does
+# not exist. Every rule in checks.py that looks oddly specific was written
+# because one of these proved the general version wrong.
+#
+#   repo-vet --from-file corpus.txt --skip web
+#
+# Expected, 22 September 2026: 4 findings, 1 of them an error. Every one was
+# checked by hand and is real. If a run of this file produces findings that
+# are not in that list, either a repository changed or repo-vet regressed,
+# and both are worth ten minutes.
+
+# Python
+psf/requests
+pallets/flask
+encode/httpx
+pytest-dev/pytest
+python-poetry/poetry
+pypa/pipx
+astral-sh/uv
+astral-sh/ruff
+tiangolo/fastapi
+anthropics/anthropic-sdk-python
+
+# JavaScript / TypeScript
+expressjs/express
+axios/axios
+chalk/chalk
+vitejs/vite
+sveltejs/svelte
+sindresorhus/execa
+prettier/prettier
+
+# Rust / Go
+BurntSushi/ripgrep
+sharkdp/bat
+clap-rs/clap
+spf13/cobra
+junegunn/fzf
+charmbracelet/bubbletea
+
+# Documentation, not code
+sindresorhus/awesome
+github/gitignore
+jlevy/the-art-of-command-line
+kamranahmedse/developer-roadmap
+
+# Edges
+torvalds/linux
+Furkiozknn/repo-vet

@@ -24,6 +24,23 @@ class Runner(unittest.TestCase):
         self.assertEqual(r.findings, [])
         self.assertEqual(r.checked, [])
         self.assertEqual(r.skipped[0][0], "*")
+        self.assertIn("no such repository", r.skipped[0][1])
+
+    def test_rate_limit_says_so_instead_of_blaming_the_repository(self):
+        r = vet("o/r", FakeClient(repo=None, repo_known=False, rate_limited=True))
+        self.assertIn("rate limit", r.skipped[0][1])
+
+    def test_unreadable_github_is_not_a_missing_repository(self):
+        r = vet("o/r", FakeClient(repo=None, repo_known=False))
+        self.assertIn("could not be read", r.skipped[0][1])
+
+    def test_truncated_tree_skips_the_tree_checks(self):
+        c = FakeClient(repo=REPO, readme="x", tree={"README.md"},
+                       tree_truncated=True)
+        r = vet("o/r", c)
+        atlanan = dict(r.skipped)
+        self.assertIn("too large", atlanan["links"])
+        self.assertIn("too large", atlanan["badges"])
 
     def test_no_readme_skips_the_readme_checks(self):
         r = vet("o/r", FakeClient(repo=REPO, readme=None, tree=set()))

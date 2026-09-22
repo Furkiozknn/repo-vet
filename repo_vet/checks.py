@@ -3,9 +3,13 @@
 
 Each one takes the repository context and returns findings. None of them
 guess: a check either observes something concrete or stays quiet. Where a
-check cannot see enough to be sure (an unreachable host, a private
-registry, a rate limit), it says it was skipped rather than reporting a
-clean result it did not earn.
+check cannot see enough to be sure — an unreachable host, a rate limit, a
+tree GitHub truncated — it says nothing rather than reporting a clean result
+it did not earn.
+
+Every rule here that looks oddly specific is there because a real repository
+proved the general version wrong. Those repositories are named in the
+comments, and in the tests.
 """
 
 import re
@@ -19,12 +23,14 @@ SURUM_PYPROJECT = re.compile(r'^\s*version\s*=\s*"([^"]+)"', re.M)
 class Context(object):
     """What every check is allowed to look at."""
 
-    def __init__(self, slug, client, meta=None, text=None, tree=None):
+    def __init__(self, slug, client, meta=None, text=None, tree=None,
+                 tree_truncated=False):
         self.slug = slug
         self.client = client
         self.meta = meta or {}
         self.text = text or ""
         self.tree = tree
+        self.tree_truncated = tree_truncated
         self.owner, _, self.name = slug.partition("/")
 
     @property
@@ -44,38 +50,58 @@ def check_install(ctx):
     """
     out = []
     for ad in sorted(md.pypi_installs(ctx.text)):
-        if not ctx.client.pypi_versions(ad):
+        surumler = ctx.client.pypi_versions(ad)
+        if surumler is None:
+            continue                      # could not ask; silence beats a guess
+        if not surumler:
             out.append(Finding(
                 "install",
                 "README tells you to install `%s` from PyPI, but no such "
                 "distribution is published there." % ad,
-                "pypi.org/project/%s -> not found" % ad))
+                "pypi.org/project/%s -> 404" % ad))
     for ad in sorted(md.npm_installs(ctx.text)):
-        if not ctx.client.npm_versions(ad):
+        surumler = ctx.client.npm_versions(ad)
+        if surumler is None:
+            continue
+        if not surumler:
             out.append(Finding(
                 "install",
                 "README tells you to install `%s` from npm, but no such "
                 "package is published there." % ad,
-                "registry.npmjs.org/%s -> not found" % ad))
+                "registry.npmjs.org/%s -> 404" % ad))
     return out
 
 
 def check_links(ctx):
-    """Do the README's relative links and images exist in the tree?"""
-    if ctx.tree is None:
+    """Do the README's relative links and images exist in the tree?
+
+    A target with a file extension is a file: if it is not there, the link is
+    broken and that is an error. A target like `tutorial/` is usually a route
+    on a documentation site that shares this README — on GitHub it still
+    404s, which is worth saying, but not worth failing a build over.
+    (`tiangolo/fastapi` links to `tutorial/` exactly this way.)
+    """
+    if ctx.tree is None or ctx.tree_truncated:
         return []
     out = []
-    for yol in sorted(md.local_targets(ctx.text)):
-        if yol in ctx.tree:
+    for yol, dosya_gibi in sorted(md.local_targets(ctx.text)):
+        if yol in ctx.tree or yol.rstrip("/") in ctx.tree:
             continue
-        # A link to a directory is fine if anything lives under it.
         onek = yol.rstrip("/") + "/"
         if any(p.startswith(onek) for p in ctx.tree):
             continue
-        out.append(Finding(
-            "links",
-            "README links to `%s`, which is not in the repository." % yol,
-            "%s@%s has no such path" % (ctx.slug, ctx.branch)))
+        if dosya_gibi:
+            out.append(Finding(
+                "links",
+                "README links to `%s`, which is not in the repository." % yol,
+                "%s@%s has no such path" % (ctx.slug, ctx.branch)))
+        else:
+            out.append(Finding(
+                "links",
+                "README links to `%s`, which is not in the repository; on "
+                "GitHub that link 404s. If it is a documentation-site route, "
+                "an absolute URL would survive both places." % yol,
+                "%s@%s has no such path" % (ctx.slug, ctx.branch), UYARI))
     return out
 
 
@@ -83,9 +109,12 @@ def check_badges(ctx):
     """Does each workflow badge point at a workflow that exists and has run?
 
     A badge whose workflow was renamed does not go red. It renders the words
-    "no status", which reads like a build nobody looks after.
+    "no status", which reads like a build nobody looks after. `axios/axios`
+    shows a badge for `ci.yml` while its workflow is called `run-ci.yml`.
     """
     out = []
+    if ctx.tree_truncated:
+        return out
     for owner, name, dosya in sorted(md.workflow_badges(ctx.text)):
         if "%s/%s" % (owner, name) != ctx.slug:
             continue                      # a badge for somebody else's repo
@@ -107,7 +136,8 @@ def check_badges(ctx):
     return out
 
 
-def _declared_version(ctx):
+def declared_version(ctx):
+    """The version the project declares, and where it says it."""
     metin = ctx.client.file_text(ctx.slug, "pyproject.toml", ctx.branch)
     if metin:
         m = SURUM_PYPROJECT.search(metin)
@@ -121,30 +151,65 @@ def _declared_version(ctx):
     return None, None
 
 
-def check_release(ctx):
-    """Is the release chain finished, or did it stop halfway?
+# A finished version number and nothing else: 1.2.0, 5.53.12, 0.1.0.
+# Anything with a suffix -- 3.2.0.dev, 3.10.0-dev, 2.0.0rc1, 1.0.0-beta.2 --
+# is a version being worked towards, and saying so every day would be noise.
+# Listing what a pre-release looks like is a losing game; listing what a
+# finished one looks like is one line.
+SON_SURUM = re.compile(r"^\d+(\.\d+)*$")
 
-    Two half-finished shapes, both silent: a tag with no release behind it,
-    and a version the project declares but never tagged.
+
+def _tag_matches(surum, adlar):
+    """Tag names that plausibly carry this version, without guessing an order."""
+    aday = {surum, "v" + surum}
+    return sorted(a for a in adlar
+                  if a in aday or a.endswith("@" + surum) or a.endswith("-" + surum))
+
+
+def check_release(ctx):
+    """Has this project ever finished a release, and did the last one land?
+
+    Two earlier versions of this check were wrong in instructive ways, and
+    both are in the tests.
+
+    The first looked at "the newest tag". The tags API promises no order, and
+    it duly announced `v0.1.16` as the newest tag of `tiangolo/fastapi` and
+    `wincolor-0.1.6` as `ripgrep`'s.
+
+    The second compared the declared version to the tag list. But a healthy
+    repository between releases declares the version it is *working towards*:
+    `pallets/flask` says `3.2.0.dev`, `astral-sh/ruff` says `0.16.8`,
+    `prettier` says `3.10.0-dev`. None of those are broken; they are Tuesday.
+
+    What is left is narrow and defensible: a project that declares a real
+    version and has never tagged anything has never shipped, and a tag that
+    carries the declared version while every other tag got a Release was
+    probably forgotten halfway.
     """
     out = []
-    etiketler = ctx.client.tags(ctx.slug)
-    adlar = [t.get("name", "") for t in etiketler]
+    surum, kaynak = declared_version(ctx)
+    if not surum or not SON_SURUM.match(surum):
+        return out                        # mid-development; nothing to say
+    adlar = [t.get("name", "") for t in ctx.client.tags(ctx.slug)]
+    if not adlar:
+        out.append(Finding(
+            "release",
+            "`%s` declares version %s, but the repository has never been "
+            "tagged." % (kaynak, surum),
+            "%s -> %s, tags -> none" % (kaynak, surum), UYARI))
+        return out
+    eslesen = _tag_matches(surum, adlar)
+    if not eslesen:
+        return out                        # between releases: normal
     yayinda = set(r.get("tag_name", "") for r in ctx.client.releases(ctx.slug)
                   if not r.get("draft"))
-    if adlar and adlar[0] not in yayinda:
+    if yayinda and not any(e in yayinda for e in eslesen):
         out.append(Finding(
             "release",
-            "The newest tag `%s` has no GitHub Release." % adlar[0],
-            "tags: %s / releases: %s" % (adlar[0], ", ".join(sorted(yayinda)) or "none"),
+            "Tag `%s` carries the declared version %s but has no GitHub "
+            "Release, while other tags here do." % (eslesen[0], surum),
+            "tag %s, releases exist for %d other tags" % (eslesen[0], len(yayinda)),
             UYARI))
-    surum, kaynak = _declared_version(ctx)
-    if surum and not adlar:
-        out.append(Finding(
-            "release",
-            "`%s` declares version %s, but the repository has no tags."
-            % (kaynak, surum),
-            "%s -> %s, tags -> none" % (kaynak, surum), UYARI))
     return out
 
 
@@ -153,14 +218,15 @@ def check_web(ctx, limit=40):
 
     404 and 410 are reported. 401/403/429 are not: they mean a host declined
     to talk to a script, which says nothing about whether a human can open
-    the page.
+    the page. Neither is a timeout.
     """
-    out = []
     baglantilar = sorted(md.external_links(ctx.text))[:limit]
+    if not baglantilar:
+        return []
+    durumlar = ctx.client.statuses(baglantilar)
+    out = []
     for url in baglantilar:
-        kod = ctx.client.status(url)
-        if kod is None:
-            continue                      # unreachable != broken
+        kod = durumlar.get(url)
         if kod in (404, 410):
             out.append(Finding(
                 "web", "README links to %s, which returns %d." % (url, kod),
@@ -174,7 +240,7 @@ def check_pages(ctx):
     ev = (ctx.meta.get("homepage") or "").strip()
     if ev:
         kod = ctx.client.status(ev)
-        if kod is not None and kod >= 400:
+        if kod is not None and kod >= 400 and kod not in (401, 403, 429):
             out.append(Finding(
                 "pages",
                 "The repository's homepage %s returns %d." % (ev, kod),

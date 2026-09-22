@@ -16,7 +16,10 @@ def _parser():
     p = argparse.ArgumentParser(
         prog="repo-vet",
         description="Check what a GitHub repository claims against what is there.")
-    p.add_argument("repos", nargs="+", metavar="OWNER/NAME")
+    p.add_argument("repos", nargs="*", metavar="OWNER/NAME")
+    p.add_argument("--from-file", dest="from_file", default=None, metavar="PATH",
+                   help="read OWNER/NAME slugs from a file, one per line; "
+                        "blank lines and lines after a # are ignored")
     p.add_argument("--token", default=None,
                    help="GitHub token. Optional for public repositories; "
                         "raises the rate limit and reaches private ones. "
@@ -52,11 +55,26 @@ def main(argv=None):
                          % (", ".join(hatali), ", ".join(CHECK_NAMES)))
         return 2
 
+    slugs = list(args.repos)
+    if args.from_file:
+        try:
+            with open(args.from_file, encoding="utf-8") as f:
+                for satir in f:
+                    satir = satir.split("#")[0].strip()
+                    if satir:
+                        slugs.append(satir)
+        except OSError as e:
+            sys.stderr.write("cannot read %s: %s\n" % (args.from_file, e))
+            return 2
+    if not slugs:
+        sys.stderr.write("nothing to check: pass OWNER/NAME or --from-file\n")
+        return 2
+
     token = args.token or os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     client = Client(token=token, timeout=args.timeout)
 
     raporlar = []
-    for slug in args.repos:
+    for slug in slugs:
         if slug.count("/") != 1 or not all(slug.split("/")):
             sys.stderr.write("not an OWNER/NAME slug: %s\n" % slug)
             return 2

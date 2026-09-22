@@ -9,6 +9,7 @@ promises can be broken.
 """
 
 import re
+import urllib.parse
 
 # A fence opens and closes at the start of a line, the way Markdown
 # defines it. Without the anchor, three backticks written mid-sentence
@@ -118,26 +119,55 @@ def npm_installs(text):
     return out
 
 
+def _prose(text):
+    """The README with its code blocks removed.
+
+    A markdown link written inside a fence is an example of markdown, not a
+    link anyone can click. Probing it would report a documented sample as a
+    broken promise.
+    """
+    return KOD_BLOGU.sub("\n", text or "")
+
+
 def local_targets(text):
-    """Relative link and image targets — the ones that must exist in the tree."""
+    """Relative link and image targets — the ones that must exist in the tree.
+
+    Returns (path, looks_like_a_file) pairs. The second half matters: a
+    target with a file extension is a file that should be in the tree, while
+    `tutorial/` or `getting-started` is usually a route on a documentation
+    site that happens to share this README. Both are worth saying; only the
+    first is worth failing a build over.
+    """
+    metin = _prose(text)
     out = set()
-    for _, hedef in BAGLANTI.findall(text or ""):
+    for _, hedef in BAGLANTI.findall(metin):
         out.add(hedef)
-    for hedef in IMG_ETIKET.findall(text or ""):
+    for hedef in IMG_ETIKET.findall(metin):
         out.add(hedef)
     yerel = set()
     for h in out:
-        if h.startswith(("http://", "https://", "//", "#", "mailto:", "data:", "tel:")):
+        if h.startswith(("http://", "https://", "//", "#", "mailto:", "data:",
+                         "tel:", "ftp:")):
             continue
         yol = h.split("#")[0].split("?")[0].strip()
         if not yol or yol.startswith("/"):
             continue
-        yerel.add(yol.lstrip("./"))
+        yol = urllib.parse.unquote(yol)
+        if yol.startswith("../"):
+            # Escapes the repository root; nothing here can confirm it.
+            continue
+        yol = yol.lstrip("./")
+        if not yol:
+            continue
+        taban = yol.rstrip("/").rsplit("/", 1)[-1]
+        dosya_gibi = "." in taban and not yol.endswith("/")
+        yerel.add((yol, dosya_gibi))
     return yerel
 
 
 def external_links(text):
-    """Absolute http(s) targets a reader can click."""
+    """Absolute http(s) targets a reader can click (examples in fences excluded)."""
+    text = _prose(text)
     out = set()
     for _, hedef in BAGLANTI.findall(text or ""):
         if hedef.startswith(("http://", "https://")):

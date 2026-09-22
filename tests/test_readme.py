@@ -102,24 +102,45 @@ class NpmInstalls(unittest.TestCase):
 
 
 class LocalTargets(unittest.TestCase):
+    def _yollar(self, metin):
+        return set(y for y, _ in md.local_targets(metin))
+
     def test_relative_links_and_images(self):
         metin = ("[docs](docs/guide.md) ![shot](assets/a.png) "
                  '<img src="assets/b.svg"> [ext](https://example.com)')
-        self.assertEqual(md.local_targets(metin),
+        self.assertEqual(self._yollar(metin),
                          {"docs/guide.md", "assets/a.png", "assets/b.svg"})
 
+    def test_a_file_and_a_route_are_told_apart(self):
+        self.assertEqual(md.local_targets("[x](docs/guide.md)"),
+                         {("docs/guide.md", True)})
+        self.assertEqual(md.local_targets("[x](tutorial/)"),
+                         {("tutorial/", False)})
+        self.assertEqual(md.local_targets("[x](getting-started)"),
+                         {("getting-started", False)})
+
     def test_anchors_and_queries_are_stripped(self):
-        self.assertEqual(md.local_targets("[x](README.md#usage)"), {"README.md"})
-        self.assertEqual(md.local_targets("[x](a/b.md?plain=1)"), {"a/b.md"})
+        self.assertEqual(self._yollar("[x](README.md#usage)"), {"README.md"})
+        self.assertEqual(self._yollar("[x](a/b.md?plain=1)"), {"a/b.md"})
 
     def test_in_page_anchor_is_not_a_file(self):
         self.assertEqual(md.local_targets("[x](#quickstart)"), set())
 
     def test_leading_dot_slash_is_normalised(self):
-        self.assertEqual(md.local_targets("[x](./LICENSE)"), {"LICENSE"})
+        self.assertEqual(self._yollar("[x](./LICENSE)"), {"LICENSE"})
+
+    def test_percent_encoding_is_decoded(self):
+        self.assertEqual(self._yollar("[x](docs/my%20guide.md)"),
+                         {"docs/my guide.md"})
+
+    def test_parent_directory_is_out_of_scope(self):
+        self.assertEqual(md.local_targets("[x](../sibling/file.md)"), set())
 
     def test_absolute_paths_are_left_alone(self):
         self.assertEqual(md.local_targets("[x](/etc/passwd)"), set())
+
+    def test_links_inside_a_fence_are_examples(self):
+        self.assertEqual(md.local_targets(blok("[x](docs/example.md)")), set())
 
 
 class ExternalLinks(unittest.TestCase):
@@ -130,6 +151,12 @@ class ExternalLinks(unittest.TestCase):
 
     def test_relative_links_are_not_external(self):
         self.assertEqual(md.external_links("[a](docs/x.md)"), set())
+
+    def test_links_inside_a_fence_are_not_probed(self):
+        self.assertEqual(md.external_links(blok("curl https://example.com/x")),
+                         set())
+        self.assertEqual(md.external_links(blok("[a](https://example.com/y)")),
+                         set())
 
 
 class WorkflowBadges(unittest.TestCase):

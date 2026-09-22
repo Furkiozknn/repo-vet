@@ -31,10 +31,11 @@ That is real output, not a mock-up.
 
 | | |
 |---|---|
-| Version | 0.1.0 |
+| Version | 0.2.0 |
 | Python | 3.9 – 3.13 |
 | Runtime dependencies | none |
-| Tests | 70, offline |
+| Tests | 97, offline |
+| Checked against | 30 public repositories ([`corpus.txt`](corpus.txt)) |
 | Licence | MIT |
 
 ## What it checks
@@ -48,6 +49,11 @@ That is real output, not a mock-up.
 | `web` | outbound links still answer | 404 and 410 only — a 403 means a host declined to talk to a script, which says nothing |
 | `pages` | the advertised site is alive, and a live site is advertised | a dead homepage, or a live GitHub Pages site nobody is told about |
 
+**Errors fail a build; warnings do not.** A link to a missing *file* is an
+error — the file is gone. A link to `tutorial/` is a warning: on GitHub it
+404s, but it is usually a route on a documentation site that shares this
+README, and that is the author's call to make, not a linter's.
+
 Two rules run through all of them.
 
 **Prose is not an instruction.** A sentence that mentions `pip install thing`
@@ -57,7 +63,39 @@ its absence produced a false positive on the first day.
 
 **Unreachable is not broken.** A host that times out, rate-limits, or refuses a
 script is not a dead link, and reporting it as one would make every other
-finding less believable. Those are counted as *not checked*, never as clean.
+finding less believable. The same applies upward: if PyPI cannot be reached,
+the install check says nothing rather than announcing a distribution as
+unpublished; if GitHub truncates a tree — `torvalds/linux` comes back with
+71,638 paths and a flag saying there are more — the link and badge checks step
+aside instead of calling good files missing. Anything unseen is reported as
+*not checked*, never as clean.
+
+## Checked against repositories that disagree with each other
+
+A linter is only worth running if a clean result means something. These are
+the thirty repositories in [`corpus.txt`](corpus.txt) — Python, Rust, Go and
+TypeScript, monorepos and single crates, documentation repositories with no
+code, a tree too large for GitHub to return whole:
+
+```bash
+repo-vet --from-file corpus.txt --skip web
+```
+
+On 22 September 2026 that produced **four findings across thirty
+repositories, one of them an error**, and each one was checked by hand:
+
+| Repository | Finding | Verified |
+|---|---|---|
+| `axios/axios` | badge points at `ci.yml` | the workflow is `run-ci.yml`; the badge renders *"no status"* |
+| `tiangolo/fastapi` | `tutorial/` is not in the tree | true on GitHub; it is a route on the documentation site |
+| `sindresorhus/awesome` | Pages site live, homepage field empty | both true |
+| `Furkiozknn/repo-vet` | declares 0.1.0, never tagged | true, and this repository's own |
+
+Three rules exist because a repository in that list disproved the general
+version: "the newest tag" (the tags API returned `v0.1.16` as the newest tag
+of `fastapi`), "a declared version should be tagged" (`flask` declares
+`3.2.0.dev` between releases, which is Tuesday, not a defect), and "a
+relative link must exist" (`fastapi` again). Each is now a named test.
 
 ## Install
 
@@ -118,6 +156,12 @@ repository's own CI does exactly this, against itself.
 - **It is not a security scanner.** For auditing an MCP server's source before
   you install it, see [mcp-vet](https://github.com/Furkiozknn/mcp-vet).
 
+## What a finding costs you
+
+Nothing is fixed automatically and nothing is opened as an issue. The output
+is a list of observations with the evidence attached, and what to do about
+each one is a judgement this tool does not make.
+
 ## Development
 
 ```bash
@@ -126,9 +170,13 @@ cd repo-vet
 PYTHONPATH=. python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-The suite is standard library only and never touches the network: the GitHub
-API, PyPI and npm are all behind one small client that the tests replace with a
+97 tests, standard library only, never touching the network: the GitHub API,
+PyPI and npm are all behind one small client that the tests replace with a
 dictionary. A linter you cannot run on a train is a linter you stop running.
+
+Before a release, the corpus above is run by hand. It needs the network and a
+GitHub token, so it is deliberately not part of CI — a suite that fails
+because somebody else's repository changed is a suite people learn to ignore.
 
 ## Licence
 

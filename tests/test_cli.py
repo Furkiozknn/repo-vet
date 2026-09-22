@@ -4,6 +4,7 @@
 import contextlib
 import io
 import json
+import os
 import unittest
 
 from repo_vet import cli
@@ -57,6 +58,46 @@ class Arguments(unittest.TestCase):
         with contextlib.redirect_stderr(err):
             cli.main(["o/r", "--skip", "nope"])
         self.assertIn("install", err.getvalue())
+
+
+class FromFile(unittest.TestCase):
+    def _dosya(self, icerik):
+        import tempfile
+        f = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False,
+                                        encoding="utf-8")
+        f.write(icerik)
+        f.close()
+        self.addCleanup(lambda: os.unlink(f.name))
+        return f.name
+
+    def test_slugs_are_read_and_comments_ignored(self):
+        yol = self._dosya("# a note\n\no/one\no/two   # trailing\n")
+        gorulen = []
+        rapor = Report("o/one", checked=["install"])
+        eski_client, eski_vet = cli.Client, cli.vet
+        cli.Client = FakeClientFactory
+        cli.vet = lambda slug, client, **kw: (gorulen.append(slug) or rapor)
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                kod = cli.main(["--from-file", yol])
+        finally:
+            cli.Client, cli.vet = eski_client, eski_vet
+        self.assertEqual(kod, 0)
+        self.assertEqual(gorulen, ["o/one", "o/two"])
+
+    def test_missing_file_is_a_usage_error(self):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            kod = cli.main(["--from-file", "no-such-file.txt"])
+        self.assertEqual(kod, 2)
+        self.assertIn("cannot read", err.getvalue())
+
+    def test_nothing_to_check_is_a_usage_error(self):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            kod = cli.main([])
+        self.assertEqual(kod, 2)
+        self.assertIn("nothing to check", err.getvalue())
 
 
 class ExitCodes(unittest.TestCase):
