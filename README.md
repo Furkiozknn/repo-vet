@@ -51,8 +51,8 @@ That is real output, not a mock-up.
 Two rules run through all of them.
 
 **Prose is not an instruction.** A sentence that mentions `pip install thing`
-is discussing it; the same line inside a ``` fence is asking you to paste it
-into a terminal. Only the second is a promise. This distinction exists because
+is discussing it; the same line inside a fenced code block is asking you to
+paste it into a terminal. Only the second is a promise. This distinction exists because
 its absence produced a false positive on the first day.
 
 **Unreachable is not broken.** A host that times out, rate-limits, or refuses a

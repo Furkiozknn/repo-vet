@@ -10,7 +10,12 @@ promises can be broken.
 
 import re
 
-KOD_BLOGU = re.compile(r"```[^\n]*\n(.*?)```", re.S)
+# A fence opens and closes at the start of a line, the way Markdown
+# defines it. Without the anchor, three backticks written mid-sentence
+# pair with the next real fence and swallow the prose in between --
+# which is how this tool first accused its own README.
+KOD_BLOGU = re.compile(r"^[ ]{0,3}```[^\n]*\n(.*?)^[ ]{0,3}```",
+                       re.S | re.M)
 
 BAGLANTI = re.compile(r"!?\[([^\]]*)\]\(\s*<?([^)>\s]+)>?(?:\s+\"[^\"]*\")?\s*\)")
 IMG_ETIKET = re.compile(r"<img[^>]*\ssrc=[\"']([^\"']+)[\"']", re.I)

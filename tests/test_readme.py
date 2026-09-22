@@ -25,6 +25,15 @@ class CodeBlocks(unittest.TestCase):
         self.assertIn("a", md.code_blocks(metin))
         self.assertIn("b", md.code_blocks(metin))
 
+    def test_backticks_in_a_sentence_do_not_open_a_block(self):
+        # This one is from life: the README explained the rule using a
+        # literal ``` mid-sentence, that stray fence paired with the next
+        # real one, and the tool reported its own prose as an instruction.
+        metin = ("A line inside a ``` fence is an instruction.\n\n"
+                 "Once published, `pip install ghost` will be shorter.\n\n"
+                 + blok("pip install real"))
+        self.assertEqual(md.pypi_installs(metin), {"real"})
+
     def test_empty(self):
         self.assertEqual(md.code_blocks(""), "")
         self.assertEqual(md.code_blocks(None), "")

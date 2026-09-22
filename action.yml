@@ -56,10 +56,12 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
       run: |
+        # Actions bu kabugu `-e` ile calistiriyor; `[ -n "" ] && ...` kalibi
+        # bos girdide 1 dondugu icin adimi daha basinda oldururdu.
         set -uo pipefail
         bayrak=""
-        [ -n "${{ inputs.only }}" ] && bayrak="$bayrak --only ${{ inputs.only }}"
-        [ -n "${{ inputs.skip }}" ] && bayrak="$bayrak --skip ${{ inputs.skip }}"
+        if [ -n "${{ inputs.only }}" ]; then bayrak="$bayrak --only ${{ inputs.only }}"; fi
+        if [ -n "${{ inputs.skip }}" ]; then bayrak="$bayrak --skip ${{ inputs.skip }}"; fi
 
         repo-vet "${{ inputs.repository }}" $bayrak \
           --web-limit "${{ inputs.web-limit }}" --json > repo-vet.json
