@@ -24,9 +24,9 @@ Every number here is measured. An unmeasured claim does not go in this file.
 
 ---
 
-## [0.2.0] — 2026-09-22
+## [0.1.0] — 2026-09-22
 
-Run against thirty public repositories that disagree with each other
+Run against twenty-nine public repositories that disagree with each other
 ([`corpus.txt`](corpus.txt)). Every false positive it produced is now a
 named test, and every rule it broke is now narrower.
 
@@ -71,14 +71,17 @@ named test, and every rule it broke is now narrower.
 
 **97 tests**, standard library only, no network in any of them
 (CI log: `=== 97 tests passed ===`), on Python 3.9 through 3.13.
-The corpus run on 22 September 2026: **4 findings across 30 repositories, 1
+The corpus run on 22 September 2026: **4 findings across 29 repositories, 1
 of them an error**, all four verified by hand.
 
 ---
 
-## [0.1.0] — 2026-09-22
+### Before the corpus run
 
-First release.
+The first cut, as it stood before it was checked against the corpus. The
+section above and this one were released together as `v0.1.0`: the corpus
+work was once headed `0.2.0`, but the code never declared that version and no
+such tag exists.
 
 ### Checks
 
