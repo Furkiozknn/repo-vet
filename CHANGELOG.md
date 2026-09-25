@@ -1,11 +1,31 @@
 # Changelog
 
-## Unreleased
+Format close to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
+versions follow [Semantic Versioning](https://semver.org/).
+
+Every number here is measured. An unmeasured claim does not go in this file.
+
+---
+
+## [0.2.0] — 2026-09-25
+
+Minor version, because two behaviours change on purpose: an unreadable
+repository now exits `3` instead of `0`, and the Action run on a pull request
+reads the pull request's README instead of the default branch's.
 
 ### Added
 
 - `--json-out PATH` writes the machine-readable report to a file while the
   console keeps whatever it was producing — text, `--markdown`, either.
+- `--ref REF` reads the README, the tree and the manifest at a branch, tag or
+  commit instead of the default branch. The ref is resolved to one commit
+  first, so every file comes from the same snapshot, and a ref that does not
+  exist is reported as `not checked` (exit `3`), not as a repository without
+  a README.
+- Action input `ref`, and output `report` (the path of the JSON report).
+- Exit code `3`: a repository could not be read at all. See *Fixed*.
+- `SECURITY.md`, `CONTRIBUTING.md`, a pull request template, and Dependabot
+  for the workflow actions.
 
 ### Changed
 
@@ -16,17 +36,71 @@
   so the summary could say "no findings" while the third pass failed the job,
   with nothing in the output to explain the contradiction. One pass now
   produces the file, the summary and the exit code.
+- A rate limit now says which limit it was (60 an hour without a token, or
+  this token's own) and when it resets, and only asks for a token when none
+  was given. A token GitHub rejects (401) is named instead of reported as
+  "GitHub could not be read".
+- A GitHub API request that times out or gets a 500/502/503/504 is asked once
+  more after a second. Rate limits, 404s and outbound links are never retried.
+- Every slug is validated before the first request, so a typo at the end of a
+  `--from-file` list fails in a second instead of after the whole scan. A
+  slug is now held to the characters GitHub allows: `o/..`, `o/r?x=1` or
+  `o/r/contents` used to go into an API URL, with the token, and ask GitHub
+  for something other than a repository.
+- **The Action checks the commit under test.** With no `ref` given and the
+  repository being the one running the workflow, it reads the README at
+  `GITHUB_SHA`: on a pull request, the merge result. Before, a pull request
+  that broke a link was vetted against `main` and passed.
+- **The Action no longer changes your job's Python.** It used
+  `actions/setup-python`, which in a composite action puts its 3.12 first on
+  `PATH` for every later step of the caller's job. It now installs into a
+  venv of its own under `RUNNER_TEMP`, and writes `repo-vet.json` there
+  instead of into your checkout.
+- Python 3.14 is tested and declared. CI actions moved off the deprecated
+  Node 20 majors (`checkout@v5`, `setup-python@v6`, `upload-artifact@v6`,
+  `download-artifact@v7`).
 
-Format close to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
-versions follow [Semantic Versioning](https://semver.org/).
+### Fixed
 
-Every number here is measured. An unmeasured claim does not go in this file.
+- **A repository nobody could read passed as clean.** A mistyped slug, a rate
+  limit, a rejected token or GitHub being down printed `clean (0 checks)` —
+  `Clean. 0 checks ran: .` in the step summary — and exited `0`, so the Action
+  gave CI a green tick for an audit that never happened. It now prints
+  `not checked` with the reason and exits `3` (still `0` under
+  `--fail-on none`). The JSON report keeps its shape.
+- **An unreadable tag list read as "never tagged".** `tags()` folded a
+  timeout or a rate limit into an empty list, and the release check then told
+  a project it had never shipped. Unknown is now `None`, and the check stays
+  quiet. `releases()` likewise.
+- **A README that could not be read was reported as missing.** A rate limit,
+  a timeout or a 5xx on the README printed "the repository has no README".
+  The client now tells "not there" (404) from "could not ask", for the README
+  and for manifests alike.
+- **A check that could not read its input still counted as having run.** The
+  release check with an unreadable `pyproject.toml`, tag list or release list
+  returned no findings and went into the "ran" column, so the report could
+  say `clean` on its behalf. It now goes into *Not checked* with the reason,
+  and a run in which nothing requested could be read exits `3`.
+- "clean (1 checks)" is "clean (1 check)".
+- **The token followed redirects to any host.** urllib copies every header,
+  `Authorization` included, onto a redirected request. The client now drops
+  it whenever a redirect leaves the origin (host, port or scheme).
+- **The Action lost its `findings` output exactly when there were findings.**
+  Actions runs the step with `bash -e`, so a non-zero exit from `repo-vet`
+  ended the script before the count was written. The inputs also reached the
+  script by `${{ }}` substitution, where a value is shell code; they now
+  arrive as environment variables.
+
+### Measured
+
+**155 tests**, standard library only, no network in any of them, on Python
+3.9 through 3.14 (`python3 -m pytest tests -q` → `155 passed`).
 
 ---
 
-## [0.2.0] — 2026-09-22
+## [0.1.0] — 2026-09-22
 
-Run against thirty public repositories that disagree with each other
+Run against twenty-nine public repositories that disagree with each other
 ([`corpus.txt`](corpus.txt)). Every false positive it produced is now a
 named test, and every rule it broke is now narrower.
 
@@ -71,14 +145,17 @@ named test, and every rule it broke is now narrower.
 
 **97 tests**, standard library only, no network in any of them
 (CI log: `=== 97 tests passed ===`), on Python 3.9 through 3.13.
-The corpus run on 22 September 2026: **4 findings across 30 repositories, 1
+The corpus run on 22 September 2026: **4 findings across 29 repositories, 1
 of them an error**, all four verified by hand.
 
 ---
 
-## [0.1.0] — 2026-09-22
+### Before the corpus run
 
-First release.
+The first cut, as it stood before it was checked against the corpus. The
+section above and this one were released together as `v0.1.0`: the corpus
+work was once headed `0.2.0`, but the code never declared that version and no
+such tag exists.
 
 ### Checks
 

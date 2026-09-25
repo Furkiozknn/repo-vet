@@ -13,6 +13,14 @@ so the fake must be able to reproduce them.
 
 
 class FakeClient(object):
+    # "Could not be read", as opposed to "not there". Set on an instance to
+    # reproduce a timeout or a 5xx on that one read.
+    readme_known = True
+    unknown_files = ()
+    # Refs that exist, as {ref: sha}; any other ref is "no such ref".
+    # None means GitHub could not be asked.
+    refs = {}
+
     def __init__(self, repo=None, repo_known=True, readme=None, tree=None,
                  tree_truncated=False, files=None, tags=None, releases=None,
                  runs=None, statuses=None, pypi=None, npm=None,
@@ -36,13 +44,23 @@ class FakeClient(object):
         return self._repo, self._repo_known
 
     def readme(self, slug, ref=None):
-        return self._readme
+        self.asked.append("readme@%s" % ref)
+        return self._readme, self.readme_known
 
     def tree(self, slug, ref):
+        self.asked.append("tree@%s" % ref)
         return self._tree, self._tree_truncated
 
+    def commit_sha(self, slug, ref):
+        if self.refs is None:
+            return None
+        return self.refs.get(ref, "")
+
     def file_text(self, slug, path, ref=None):
-        return self._files.get(path)
+        self.asked.append("file:%s@%s" % (path, ref))
+        if path in self.unknown_files:
+            return None, False
+        return self._files.get(path), True
 
     def tags(self, slug):
         return self._tags

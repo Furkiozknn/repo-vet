@@ -12,6 +12,10 @@ import json
 HATA = "error"
 UYARI = "warning"
 
+# The one reason for not checking something that is the user's choice rather
+# than the tool's blindness.
+ISTEKLE = "skipped on request"
+
 
 class Finding(object):
     """One checked claim that did not hold.
@@ -62,6 +66,14 @@ class Report(object):
     @property
     def warnings(self):
         return [f for f in self.findings if f.level == UYARI]
+
+    @property
+    def unreadable(self):
+        """True when not a single check ran, and not because the user asked
+        for that: the repository, the ref, or everything the requested checks
+        needed could not be read. Such a report has no findings, and it is
+        not clean: nothing was looked at."""
+        return not self.checked and any(r != ISTEKLE for _, r in self.skipped)
 
     def add(self, finding):
         self.findings.append(finding)
