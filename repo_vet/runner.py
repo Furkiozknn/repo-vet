@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Runs the checks and assembles the report."""
 
+import datetime
+
 from .checks import CHECKS, Context
 from .model import Report
 
@@ -19,10 +21,12 @@ def vet(slug, client, only=None, skip=None, web_limit=40):
 
     meta, bilinen = client.repo(slug)
     if meta is None:
-        if client.rate_limited:
+        if getattr(client, "bad_credentials", False):
             rapor.skipped.append(
-                ("*", "GitHub rate limit reached; pass a token with --token "
-                      "or GITHUB_TOKEN"))
+                ("*", "GitHub rejected the token (401 Bad credentials); check "
+                      "--token, GITHUB_TOKEN or GH_TOKEN"))
+        elif client.rate_limited:
+            rapor.skipped.append(("*", _rate_limit_reason(client)))
         elif bilinen:
             rapor.skipped.append(("*", "no such repository, or not visible "
                                        "with this token"))
@@ -37,7 +41,11 @@ def vet(slug, client, only=None, skip=None, web_limit=40):
                   tree_truncated=kirpik)
 
     if metin is None:
-        rapor.skipped.append(("readme", "the repository has no README"))
+        if client.rate_limited:
+            rapor.skipped.append(("readme", "the README could not be read "
+                                            "(GitHub rate limit)"))
+        else:
+            rapor.skipped.append(("readme", "the repository has no README"))
 
     for ad, fn in CHECKS:
         if only and ad not in only:
@@ -71,3 +79,21 @@ def vet(slug, client, only=None, skip=None, web_limit=40):
         rapor.skipped.append(("*", "a GitHub rate limit was hit during this "
                                    "run; some answers may be incomplete"))
     return rapor
+
+
+def _rate_limit_reason(client):
+    """Say which limit, and what would lift it.
+
+    Without a token GitHub allows 60 requests an hour, which one link-heavy
+    README can use up; the fix is a token. With a token the fix is waiting,
+    and telling someone to pass the token they already passed is noise.
+    """
+    ne_zaman = ""
+    reset = getattr(client, "rate_reset", None)
+    if reset:
+        ne_zaman = "; it resets at %s" % datetime.datetime.fromtimestamp(
+            reset, datetime.timezone.utc).strftime("%H:%M UTC")
+    if getattr(client, "token", None):
+        return "GitHub rate limit reached for this token%s" % ne_zaman
+    return ("GitHub rate limit reached (60 requests an hour without a "
+            "token)%s; pass --token or set GITHUB_TOKEN" % ne_zaman)

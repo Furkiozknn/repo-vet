@@ -41,7 +41,7 @@ That is real output, not a mock-up.
 | Version | 0.1.0 |
 | Python | 3.9 – 3.13 |
 | Runtime dependencies | none |
-| Tests | 97, offline |
+| Tests | 127, offline |
 | Checked against | 30 public repositories ([`corpus.txt`](corpus.txt)) |
 | Licence | MIT |
 
@@ -135,10 +135,22 @@ repo-vet OWNER/NAME --json-out r.json --markdown   # both, from one scan
 ```
 
 A token is optional for public repositories. `--token`, `GITHUB_TOKEN` or
-`GH_TOKEN` raises the rate limit and reaches private repositories.
+`GH_TOKEN` raises the rate limit and reaches private repositories. Without one
+GitHub allows 60 API requests an hour, and a repository costs five to seven of
+them (measured on three repositories with `--skip web`), so a `--from-file`
+list will want a token. When a limit is hit, the report says which one and
+when it resets; a token GitHub rejects is named as such rather than passed off
+as a missing repository. A GitHub request that times out or gets a 5xx is
+asked once more; outbound links never are.
 
-Exit codes: `0` nothing to report, `1` findings (see `--fail-on`), `2` bad usage.
-Warnings never fail a run on their own — `--fail-on any` if you want them to.
+| Exit code | Meaning |
+|---|---|
+| `0` | nothing to report (warnings alone never fail a run — `--fail-on any` if you want them to) |
+| `1` | findings, as `--fail-on` defines them |
+| `2` | bad usage: an unknown check, a malformed slug, an unreadable `--from-file` |
+| `3` | a repository could not be read at all — a mistyped slug, a rate limit, a rejected token. It has no findings because nothing was looked at, and that is not the same as clean |
+
+`--fail-on none` exits `0` in every case except bad usage.
 
 ## Use it in CI
 
@@ -187,7 +199,7 @@ cd repo-vet
 PYTHONPATH=. python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-97 tests, standard library only, never touching the network: the GitHub API,
+127 tests, standard library only, never touching the network: the GitHub API,
 PyPI and npm are all behind one small client that the tests replace with a
 dictionary. A linter you cannot run on a train is a linter you stop running.
 

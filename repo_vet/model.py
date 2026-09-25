@@ -63,6 +63,13 @@ class Report(object):
     def warnings(self):
         return [f for f in self.findings if f.level == UYARI]
 
+    @property
+    def unreadable(self):
+        """True when not a single check ran because the repository itself
+        could not be read. Such a report has no findings, and it is not
+        clean: nothing was looked at."""
+        return not self.checked and any(c == "*" for c, _ in self.skipped)
+
     def add(self, finding):
         self.findings.append(finding)
 

@@ -190,7 +190,10 @@ def check_release(ctx):
     surum, kaynak = declared_version(ctx)
     if not surum or not SON_SURUM.match(surum):
         return out                        # mid-development; nothing to say
-    adlar = [t.get("name", "") for t in ctx.client.tags(ctx.slug)]
+    etiketler = ctx.client.tags(ctx.slug)
+    if etiketler is None:
+        return out                        # could not ask; not "never tagged"
+    adlar = [t.get("name", "") for t in etiketler]
     if not adlar:
         out.append(Finding(
             "release",
@@ -201,7 +204,7 @@ def check_release(ctx):
     eslesen = _tag_matches(surum, adlar)
     if not eslesen:
         return out                        # between releases: normal
-    yayinda = set(r.get("tag_name", "") for r in ctx.client.releases(ctx.slug)
+    yayinda = set(r.get("tag_name", "") for r in ctx.client.releases(ctx.slug) or []
                   if not r.get("draft"))
     if yayinda and not any(e in yayinda for e in eslesen):
         out.append(Finding(

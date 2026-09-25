@@ -53,15 +53,25 @@ runs:
     - name: Vet
       id: vet
       shell: bash
+      # Girdiler betige `${{ }}` ile gomulmuyor, ortam degiskeni olarak
+      # geliyor: gomulen bir deger kabuk kodu olarak calisirdi.
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
+        RV_REPOSITORY: ${{ inputs.repository }}
+        RV_ONLY: ${{ inputs.only }}
+        RV_SKIP: ${{ inputs.skip }}
+        RV_WEB_LIMIT: ${{ inputs.web-limit }}
+        RV_FAIL_ON: ${{ inputs.fail-on }}
       run: |
         # Actions bu kabugu `-e` ile calistiriyor; `[ -n "" ] && ...` kalibi
-        # bos girdide 1 dondugu icin adimi daha basinda oldururdu.
+        # bos girdide 1 dondugu icin adimi daha basinda oldururdu. `set +e`
+        # da sart: yoksa repo-vet 1 dondugunde betik `kod=$?` satirina hic
+        # varmiyor ve `findings` ciktisi tam bulgu oldugunda bos kaliyordu.
+        set +e
         set -uo pipefail
-        bayrak=""
-        if [ -n "${{ inputs.only }}" ]; then bayrak="$bayrak --only ${{ inputs.only }}"; fi
-        if [ -n "${{ inputs.skip }}" ]; then bayrak="$bayrak --skip ${{ inputs.skip }}"; fi
+        bayrak=()
+        if [ -n "$RV_ONLY" ]; then bayrak+=(--only "$RV_ONLY"); fi
+        if [ -n "$RV_SKIP" ]; then bayrak+=(--skip "$RV_SKIP"); fi
 
         # TEK tarama. Once uc kosu vardi -- biri JSON icin, biri adim ozeti
         # icin, biri cikis kodu icin -- ve her biri dis baglantilari ayri ayri
@@ -69,13 +79,17 @@ runs:
         # celisebilmesiydi: cikti "0 bulgu" derken ucuncu kosu kirmizi
         # yanabilirdi. --json-out ayni kosunun raporunu dosyaya da yaziyor,
         # boylece sayi, ozet ve cikis kodu ayni olcumden geliyor.
-        repo-vet "${{ inputs.repository }}" $bayrak \
-          --web-limit "${{ inputs.web-limit }}" \
+        # Cikis kodu 3: depo hic okunamadi (yanlis slug, oran siniri,
+        # reddedilen jeton). Bulgu yok ama temiz de degil; adim kirmizi yanar.
+        repo-vet "$RV_REPOSITORY" ${bayrak[@]+"${bayrak[@]}"} \
+          --web-limit "$RV_WEB_LIMIT" \
           --json-out repo-vet.json --markdown \
-          --fail-on "${{ inputs.fail-on }}" >> "$GITHUB_STEP_SUMMARY"
+          --fail-on "$RV_FAIL_ON" >> "$GITHUB_STEP_SUMMARY"
         kod=$?
 
-        sayi=$(python3 -c "import json;print(sum(r['finding_count'] for r in json.load(open('repo-vet.json'))))")
-        echo "findings=$sayi" >> "$GITHUB_OUTPUT"
+        if [ -f repo-vet.json ]; then
+          sayi=$(python3 -c "import json;print(sum(r['finding_count'] for r in json.load(open('repo-vet.json'))))")
+          echo "findings=$sayi" >> "$GITHUB_OUTPUT"
+        fi
 
         exit "$kod"

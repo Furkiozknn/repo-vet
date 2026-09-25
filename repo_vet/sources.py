@@ -15,6 +15,7 @@ broken install command. Callers get `None` when the answer is unknown.
 
 import base64
 import json
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -27,16 +28,27 @@ NPM = "https://registry.npmjs.org/%s"
 KULLANICI = "repo-vet"
 
 
-class Client(object):
-    """A thin, honest HTTP client. No retries, no caching magic, no surprises."""
+# A GitHub API call that failed this way is asked once more. Not a rate limit
+# (asking again makes it worse), not a 404 (that is an answer), and never an
+# outbound link (a slow third-party host is that host's business).
+YENIDEN = (500, 502, 503, 504)
 
-    def __init__(self, token=None, timeout=20, opener=None, workers=8):
+
+class Client(object):
+    """A thin, honest HTTP client. One retry for GitHub's own hiccups, no
+    caching magic, no surprises."""
+
+    def __init__(self, token=None, timeout=20, opener=None, workers=8,
+                 sleep=None):
         self.token = token
         self.timeout = timeout
         self.workers = max(1, workers)
         self._opener = opener or urllib.request.urlopen
+        self._sleep = sleep or time.sleep
         self._cache = {}
         self.rate_limited = False
+        self.rate_reset = None          # epoch seconds, from X-RateLimit-Reset
+        self.bad_credentials = False    # GitHub answered 401 to this token
 
     # -- low level ---------------------------------------------------------
 
@@ -52,19 +64,42 @@ class Client(object):
 
     def _get(self, url, accept=None, auth=False, timeout=None):
         """(status, bytes) — status None when the host could not be reached."""
+        github = url.startswith(GITHUB_API + "/")
+        kod, govde = self._get_once(url, accept, auth, timeout)
+        if github and (kod is None or kod in YENIDEN):
+            self._sleep(1)
+            kod, govde = self._get_once(url, accept, auth, timeout)
+        return kod, govde
+
+    def _get_once(self, url, accept, auth, timeout):
         try:
             kod, govde, basliklar = self._fetch(url, accept, auth, timeout)
             return kod, govde
         except urllib.error.HTTPError as e:
-            if e.code in (403, 429) and "api.github.com" in url:
-                # Secondary rate limits and the unauthenticated 60/hour ceiling
-                # both land here. Remembering it lets the report say "not
-                # checked" instead of inventing a clean bill of health.
-                if (e.headers or {}).get("X-RateLimit-Remaining") == "0":
-                    self.rate_limited = True
+            if url.startswith(GITHUB_API + "/"):
+                self._github_error(e)
             return e.code, None
         except Exception:
             return None, None
+
+    def _github_error(self, e):
+        """Remember why GitHub said no, so the report can say it too."""
+        basliklar = e.headers or {}
+        if e.code == 401:
+            self.bad_credentials = True
+        elif e.code in (403, 429):
+            # The primary limit (60/hour without a token, 5,000 with one)
+            # says so with Remaining: 0; a secondary limit says Retry-After.
+            # A plain 403 is neither and stays a plain 403. Remembering it
+            # lets the report say "not checked" instead of inventing a clean
+            # bill of health.
+            if (basliklar.get("X-RateLimit-Remaining") == "0"
+                    or basliklar.get("Retry-After") is not None):
+                self.rate_limited = True
+                try:
+                    self.rate_reset = int(basliklar.get("X-RateLimit-Reset"))
+                except (TypeError, ValueError):
+                    pass
 
     def status(self, url, timeout=None):
         """HTTP status for a URL, or None when the host could not be reached."""
@@ -97,10 +132,6 @@ class Client(object):
             return json.loads(govde.decode("utf-8")), True
         except Exception:
             return None, False
-
-    def _veri(self, url, auth=False, varsayilan=None):
-        veri, _ = self.json(url, auth=auth)
-        return varsayilan if veri is None else veri
 
     # -- GitHub ------------------------------------------------------------
 
@@ -142,12 +173,18 @@ class Client(object):
         return base64.b64decode(veri["content"]).decode("utf-8", "replace")
 
     def tags(self, slug):
-        return self._veri("%s/repos/%s/tags?per_page=100" % (GITHUB_API, slug),
-                          auth=True, varsayilan=[])
+        """Tag objects, `[]` when there are none, `None` when unknown."""
+        return self._liste("%s/repos/%s/tags?per_page=100" % (GITHUB_API, slug))
 
     def releases(self, slug):
-        return self._veri("%s/repos/%s/releases?per_page=100" % (GITHUB_API, slug),
-                          auth=True, varsayilan=[])
+        """Release objects, `[]` when there are none, `None` when unknown."""
+        return self._liste("%s/repos/%s/releases?per_page=100" % (GITHUB_API, slug))
+
+    def _liste(self, url):
+        veri, bilinen = self.json(url, auth=True)
+        if veri is None:
+            return [] if bilinen else None
+        return veri
 
     def workflow_runs(self, slug, path):
         veri, _ = self.json("%s/repos/%s/actions/workflows/%s/runs?per_page=1"

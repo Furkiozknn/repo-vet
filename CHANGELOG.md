@@ -6,6 +6,8 @@
 
 - `--json-out PATH` writes the machine-readable report to a file while the
   console keeps whatever it was producing — text, `--markdown`, either.
+- Exit code `3`: a repository could not be read at all. See *Fixed*.
+- `SECURITY.md`: what the token is sent to, and how to report a problem.
 
 ### Changed
 
@@ -16,6 +18,33 @@
   so the summary could say "no findings" while the third pass failed the job,
   with nothing in the output to explain the contradiction. One pass now
   produces the file, the summary and the exit code.
+- A rate limit now says which limit it was (60 an hour without a token, or
+  this token's own) and when it resets, and only asks for a token when none
+  was given. A token GitHub rejects (401) is named instead of reported as
+  "GitHub could not be read".
+- A GitHub API request that times out or gets a 500/502/503/504 is asked once
+  more after a second. Rate limits, 404s and outbound links are never retried.
+- Every slug is validated before the first request, so a typo at the end of a
+  `--from-file` list fails in a second instead of after the whole scan.
+
+### Fixed
+
+- **A repository nobody could read passed as clean.** A mistyped slug, a rate
+  limit, a rejected token or GitHub being down printed `clean (0 checks)` —
+  `Clean. 0 checks ran: .` in the step summary — and exited `0`, so the Action
+  gave CI a green tick for an audit that never happened. It now prints
+  `not checked` with the reason and exits `3` (still `0` under
+  `--fail-on none`). The JSON report keeps its shape.
+- **An unreadable tag list read as "never tagged".** `tags()` folded a
+  timeout or a rate limit into an empty list, and the release check then told
+  a project it had never shipped. Unknown is now `None`, and the check stays
+  quiet. `releases()` likewise.
+- **A README hidden by a rate limit read as "the repository has no README".**
+- **The Action lost its `findings` output exactly when there were findings.**
+  Actions runs the step with `bash -e`, so a non-zero exit from `repo-vet`
+  ended the script before the count was written. The inputs also reached the
+  script by `${{ }}` substitution, where a value is shell code; they now
+  arrive as environment variables.
 
 Format close to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow [Semantic Versioning](https://semver.org/).

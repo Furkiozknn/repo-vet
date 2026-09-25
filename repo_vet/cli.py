@@ -36,7 +36,9 @@ def _parser():
     p.add_argument("--web-limit", type=int, default=40,
                    help="how many outbound links to try (default 40)")
     p.add_argument("--fail-on", choices=("error", "any", "none"), default="error",
-                   help="what makes the exit code non-zero (default: error)")
+                   help="what makes the exit code non-zero (default: error). "
+                        "Exit codes: 0 clean, 1 findings, 2 bad usage, "
+                        "3 a repository could not be read at all")
     p.add_argument("--timeout", type=int, default=20)
     p.add_argument("--version", action="version", version="repo-vet " + __version__)
     return p
@@ -73,14 +75,18 @@ def main(argv=None):
         sys.stderr.write("nothing to check: pass OWNER/NAME or --from-file\n")
         return 2
 
+    # Every slug is checked before any network work: a typo on line 30 of a
+    # --from-file list should not cost twenty-nine scans and then no report.
+    for slug in slugs:
+        if slug.count("/") != 1 or not all(slug.split("/")):
+            sys.stderr.write("not an OWNER/NAME slug: %s\n" % slug)
+            return 2
+
     token = args.token or os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     client = Client(token=token, timeout=args.timeout)
 
     raporlar = []
     for slug in slugs:
-        if slug.count("/") != 1 or not all(slug.split("/")):
-            sys.stderr.write("not an OWNER/NAME slug: %s\n" % slug)
-            return 2
         raporlar.append(vet(slug, client, only=_liste(args.only),
                             skip=_liste(args.skip), web_limit=args.web_limit))
 
@@ -113,8 +119,16 @@ def main(argv=None):
     if args.fail_on == "none":
         return 0
     if args.fail_on == "any":
-        return 1 if any(r.findings for r in raporlar) else 0
-    return 1 if any(r.errors for r in raporlar) else 0
+        if any(r.findings for r in raporlar):
+            return 1
+    elif any(r.errors for r in raporlar):
+        return 1
+    # A repository that could not be read at all - a mistyped slug, a rate
+    # limit, a rejected token - has no findings because nobody looked. Exiting
+    # 0 would hand CI a green tick for an audit that never happened.
+    if any(r.unreadable for r in raporlar):
+        return 3
+    return 0
 
 
 if __name__ == "__main__":                                # pragma: no cover

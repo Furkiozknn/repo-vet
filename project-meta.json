@@ -49,10 +49,10 @@
     "videos": []
   },
   "tests": {
-    "count": 103,
+    "count": 127,
     "framework": "unittest via pytest",
     "command": "python3 -m pytest tests -q",
-    "evidence": "103 passed"
+    "evidence": "127 passed"
   },
   "ci": {
     "workflows": [
@@ -66,7 +66,7 @@
     "changelog": "CHANGELOG.md",
     "version_history": null,
     "roadmap": null,
-    "security": null,
+    "security": "SECURITY.md",
     "contributing": null,
     "license_file": "LICENSE"
   },
