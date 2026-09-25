@@ -2,7 +2,6 @@
 """Runs the checks and assembles the report."""
 
 import datetime
-
 import re
 
 from .checks import CHECKS, Context, NotChecked

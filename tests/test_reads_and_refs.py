@@ -334,8 +334,9 @@ class ActionStep(unittest.TestCase):
         p = subprocess.run(["bash", "--noprofile", "--norc", "-eo", "pipefail",
                             "-c", _vet_betigi()], env=ortam,
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        oku = lambda ad: (open(os.path.join(d, ad)).read()
-                          if os.path.exists(os.path.join(d, ad)) else "")
+        def oku(ad):
+            yol = os.path.join(d, ad)
+            return open(yol).read() if os.path.exists(yol) else ""
         return p.returncode, oku("out"), oku("args").splitlines(), d
 
     def test_exit_code_passes_through_and_findings_are_written(self):
