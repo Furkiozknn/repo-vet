@@ -11,7 +11,7 @@
 <!-- The command you ran and what it printed. "Tests pass" is not enough. -->
 
 ```
-# e.g. PYTHONPATH=. python -m unittest discover -s tests -p "test_*.py"  ->  Ran 154 tests ... OK
+# e.g. PYTHONPATH=. python -m unittest discover -s tests -p "test_*.py"  ->  Ran N tests ... OK
 ```
 
 ## Kontrol listesi (Checklist)

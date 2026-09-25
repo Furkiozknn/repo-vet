@@ -51,10 +51,10 @@
     "videos": []
   },
   "tests": {
-    "count": 154,
+    "count": 155,
     "framework": "unittest via pytest",
     "command": "python3 -m pytest tests -q",
-    "evidence": "154 passed"
+    "evidence": "155 passed"
   },
   "ci": {
     "workflows": [

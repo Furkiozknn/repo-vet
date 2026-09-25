@@ -51,7 +51,7 @@ finding, `3` means the repository could not be read — [the full table](#use-it
 | Version | 0.2.0 on `main`; latest tag [`v0.1.0`](https://github.com/Furkiozknn/repo-vet/releases/tag/v0.1.0) |
 | Python | 3.9 – 3.14 |
 | Runtime dependencies | none |
-| Tests | 154, offline |
+| Tests | 155, offline |
 | Checked against | 29 public repositories ([`corpus.txt`](corpus.txt)) |
 | Licence | MIT |
 
@@ -232,7 +232,7 @@ cd repo-vet
 PYTHONPATH=. python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-154 tests, standard library only, never touching the network: the GitHub API,
+155 tests, standard library only, never touching the network: the GitHub API,
 PyPI and npm are all behind one small client that the tests replace with a
 dictionary. (The redirect tests start two servers on `127.0.0.1`, and the
 Action tests run its shell step under `bash`; neither leaves the machine.)

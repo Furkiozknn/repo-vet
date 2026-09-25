@@ -42,11 +42,15 @@ def as_text(rapor, renkli=False):
     return "\n".join(satir)
 
 
+def _kontrol(n):
+    return "%d check%s" % (n, "" if n == 1 else "s")
+
+
 def _ozet(rapor):
     if rapor.unreadable:
         return "not checked"
     if not rapor.findings:
-        return "clean (%d checks)" % len(rapor.checked)
+        return "clean (%s)" % _kontrol(len(rapor.checked))
     return "%d finding%s, %d of them errors" % (
         len(rapor.findings), "" if len(rapor.findings) == 1 else "s",
         len(rapor.errors))
@@ -61,8 +65,8 @@ def as_markdown(rapor):
                      % "; ".join(s for _, s in rapor.skipped))
         return "\n".join(satir) + "\n"
     if not rapor.findings:
-        satir.append("Clean. %d checks ran: %s."
-                     % (len(rapor.checked), ", ".join(rapor.checked)))
+        satir.append("Clean. %s ran: %s."
+                     % (_kontrol(len(rapor.checked)), ", ".join(rapor.checked)))
         return "\n".join(satir) + "\n"
     satir.append("**%s**" % _ozet(rapor))
     satir.append("")

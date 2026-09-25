@@ -279,6 +279,15 @@ class TokenOnRedirect(unittest.TestCase):
                                  ("/landed", "Bearer s3cret")])
 
 
+class Wording(unittest.TestCase):
+    def test_one_check_is_singular(self):
+        from repo_vet.report import as_markdown
+        r = Report("o/r", checked=["links"])
+        self.assertIn("clean (1 check)", as_text(r))
+        self.assertIn("Clean. 1 check ran: links.", as_markdown(r))
+        self.assertIn("clean (2 checks)", as_text(Report("o/r", checked=["a", "b"])))
+
+
 # -- the Action's shell step --------------------------------------------------
 
 

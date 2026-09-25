@@ -81,6 +81,7 @@ reads the pull request's README instead of the default branch's.
   returned no findings and went into the "ran" column, so the report could
   say `clean` on its behalf. It now goes into *Not checked* with the reason,
   and a run in which nothing requested could be read exits `3`.
+- "clean (1 checks)" is "clean (1 check)".
 - **The token followed redirects to any host.** urllib copies every header,
   `Authorization` included, onto a redirected request. The client now drops
   it whenever a redirect leaves the origin (host, port or scheme).
@@ -92,8 +93,8 @@ reads the pull request's README instead of the default branch's.
 
 ### Measured
 
-**154 tests**, standard library only, no network in any of them, on Python
-3.9 through 3.14 (`python3 -m pytest tests -q` → `154 passed`).
+**155 tests**, standard library only, no network in any of them, on Python
+3.9 through 3.14 (`python3 -m pytest tests -q` → `155 passed`).
 
 ---
 
