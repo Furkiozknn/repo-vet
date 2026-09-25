@@ -252,6 +252,7 @@ class TokenOnRedirect(unittest.TestCase):
         uzak = []
         yerel = []
         hedef_sunucu = _sunucu(uzak)
+        self.addCleanup(hedef_sunucu.server_close)
         self.addCleanup(hedef_sunucu.shutdown)
         hedef_port = hedef_sunucu.server_address[1]
         if ayni_koken:
@@ -259,6 +260,7 @@ class TokenOnRedirect(unittest.TestCase):
             kaynak.RequestHandlerClass.hedef = "/landed"
         else:
             kaynak = _sunucu(yerel, "http://127.0.0.1:%d/landed" % hedef_port)
+        self.addCleanup(kaynak.server_close)
         self.addCleanup(kaynak.shutdown)
         # No proxy for this: the request must reach 127.0.0.1 itself.
         with mock.patch.dict(os.environ, {"no_proxy": "*", "NO_PROXY": "*"}):
@@ -291,9 +293,14 @@ class Wording(unittest.TestCase):
 # -- the Action's shell step --------------------------------------------------
 
 
+def _action_yml():
+    with open(os.path.join(KOK, "action.yml"), encoding="utf-8") as f:
+        return f.read()
+
+
 def _vet_betigi():
     """The `run:` block of the action's Vet step, as the runner would see it."""
-    metin = open(os.path.join(KOK, "action.yml"), encoding="utf-8").read()
+    metin = _action_yml()
     blok = metin.split("- name: Vet", 1)[1].split("      run: |\n", 1)[1]
     satirlar = []
     for satir in blok.splitlines():
@@ -336,7 +343,10 @@ class ActionStep(unittest.TestCase):
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         def oku(ad):
             yol = os.path.join(d, ad)
-            return open(yol).read() if os.path.exists(yol) else ""
+            if not os.path.exists(yol):
+                return ""
+            with open(yol) as f:
+                return f.read()
         return p.returncode, oku("out"), oku("args").splitlines(), d
 
     def test_exit_code_passes_through_and_findings_are_written(self):
@@ -378,7 +388,7 @@ class ActionStep(unittest.TestCase):
 
     def test_no_input_is_substituted_into_a_script(self):
         # `${{ inputs.x }}` inside `run:` is pasted into the script as code.
-        metin = open(os.path.join(KOK, "action.yml"), encoding="utf-8").read()
+        metin = _action_yml()
         for blok in re.findall(r"run: \|\n((?:        .*\n|\n)+)", metin):
             self.assertNotIn("${{", blok)
 

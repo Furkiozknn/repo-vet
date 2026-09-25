@@ -42,8 +42,14 @@ jobs:
       - name: Run the suite
         run: |
           set -euo pipefail
-          PYTHONPATH=. python -m unittest discover -s tests -p "test_*.py" -v 2>&1 | tee ciktisi.txt
-          echo "=== $(grep -c '\.\.\. ok' ciktisi.txt) tests passed ==="
+          PYTHONPATH=. python -Werror::ResourceWarning -m unittest discover -s tests -p "test_*.py" -v 2>&1 | tee ciktisi.txt
+          # The count comes from unittest's own summary, not from counting
+          # "... ok" lines: a warning printed mid-line hid 9 passing tests
+          # from that grep. A skipped test would say "OK (skipped=N)" and
+          # fail the exact match below instead of passing silently.
+          sayi=$(sed -n 's/^Ran \([0-9]*\) tests\{0,1\} in .*/\1/p' ciktisi.txt)
+          test "$(tail -n 1 ciktisi.txt)" = "OK"
+          echo "=== $sayi tests passed ==="
 
   package:
     name: package builds
