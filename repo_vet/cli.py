@@ -3,6 +3,7 @@
 
 import argparse
 import os
+import re
 import sys
 
 from . import __version__
@@ -24,6 +25,9 @@ def _parser():
                    help="GitHub token. Optional for public repositories; "
                         "raises the rate limit and reaches private ones. "
                         "Falls back to GITHUB_TOKEN or GH_TOKEN.")
+    p.add_argument("--ref", default=None, metavar="REF",
+                   help="read the README and files at this branch, tag or "
+                        "commit instead of the default branch")
     p.add_argument("--only", default=None,
                    help="run only these checks (comma separated): " + ", ".join(CHECK_NAMES))
     p.add_argument("--skip", default=None, help="skip these checks (comma separated)")
@@ -42,6 +46,26 @@ def _parser():
     p.add_argument("--timeout", type=int, default=20)
     p.add_argument("--version", action="version", version="repo-vet " + __version__)
     return p
+
+
+# What GitHub allows in an owner or repository name. Anything else -- a
+# space, `?`, `#`, `%`, or a `..` segment -- would change which API URL gets
+# requested (with the token attached) instead of naming a repository.
+SLUG_PARCA = re.compile(r"^[A-Za-z0-9._-]+$")
+# A branch, tag or commit: git's own characters, minus the ones git forbids
+# in a ref name and the `..` that would walk up an API path.
+REF = re.compile(r"^[A-Za-z0-9._/+@-]+$")
+
+
+def slug_ok(slug):
+    parcalar = slug.split("/")
+    return (len(parcalar) == 2
+            and all(SLUG_PARCA.match(p) and p not in (".", "..") for p in parcalar))
+
+
+def ref_ok(ref):
+    return bool(REF.match(ref)) and ".." not in ref and "@{" not in ref \
+        and not ref.startswith(("/", "-")) and not ref.endswith("/")
 
 
 def _liste(deger):
@@ -78,9 +102,12 @@ def main(argv=None):
     # Every slug is checked before any network work: a typo on line 30 of a
     # --from-file list should not cost twenty-nine scans and then no report.
     for slug in slugs:
-        if slug.count("/") != 1 or not all(slug.split("/")):
+        if not slug_ok(slug):
             sys.stderr.write("not an OWNER/NAME slug: %s\n" % slug)
             return 2
+    if args.ref is not None and not ref_ok(args.ref):
+        sys.stderr.write("not a branch, tag or commit: %s\n" % args.ref)
+        return 2
 
     token = args.token or os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     client = Client(token=token, timeout=args.timeout)
@@ -88,7 +115,8 @@ def main(argv=None):
     raporlar = []
     for slug in slugs:
         raporlar.append(vet(slug, client, only=_liste(args.only),
-                            skip=_liste(args.skip), web_limit=args.web_limit))
+                            skip=_liste(args.skip), web_limit=args.web_limit,
+                            ref=args.ref))
 
     # One scan, one truth. Writing the machine-readable report to a file
     # alongside whatever the console gets means a caller no longer has to run

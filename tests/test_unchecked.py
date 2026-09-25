@@ -138,6 +138,7 @@ class Messages(unittest.TestCase):
 
     def test_readme_hidden_by_a_rate_limit_is_not_absent(self):
         c = FakeClient(repo=REPO, readme=None, tree=set(), rate_limited=True)
+        c.readme_known = False
         sebepler = dict(vet("o/r", c).skipped)
         self.assertNotIn("has no README", sebepler.get("readme", ""))
         self.assertIn("could not be read", sebepler["readme"])
@@ -150,14 +151,16 @@ class ReleaseWhenTagsAreUnknown(unittest.TestCase):
         fc = FakeClient(files={"pyproject.toml": '[project]\nversion = "1.2.0"\n'})
         fc._tags = None
         c = checks.Context("o/r", fc, meta={}, text="", tree=None)
-        self.assertEqual(checks.check_release(c), [])
+        with self.assertRaises(checks.NotChecked):
+            checks.check_release(c)
 
     def test_unreadable_releases_do_not_crash(self):
         fc = FakeClient(files={"pyproject.toml": '[project]\nversion = "1.2.0"\n'},
                         tags=[{"name": "v1.2.0"}])
         fc._releases = None
         c = checks.Context("o/r", fc, meta={}, text="", tree=None)
-        self.assertEqual(checks.check_release(c), [])
+        with self.assertRaises(checks.NotChecked):
+            checks.check_release(c)
 
 
 class _Yanit(object):

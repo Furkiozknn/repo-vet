@@ -11,6 +11,14 @@ inputs:
     description: "Repository to check, as owner/name. Defaults to the one running the workflow."
     required: false
     default: ${{ github.repository }}
+  ref:
+    description: >-
+      Branch, tag or commit to read the README and files at. Empty (the
+      default) means the commit this workflow runs on when the repository
+      is the one running the workflow -- so a pull request is checked as it
+      would merge -- and the default branch for any other repository.
+    required: false
+    default: ""
   token:
     description: "Token used for the GitHub API. The default job token is enough for a public repository."
     required: false
@@ -34,21 +42,42 @@ inputs:
 
 outputs:
   findings:
-    description: "Number of findings."
+    description: "Number of findings. Empty when there is no report (bad usage)."
     value: ${{ steps.vet.outputs.findings }}
+  report:
+    description: "Path of the JSON report, under RUNNER_TEMP so it never lands in your checkout."
+    value: ${{ steps.vet.outputs.report }}
 
 runs:
   using: "composite"
   steps:
-    - uses: actions/setup-python@v5
+    # `update-environment: false`: a composite action shares the caller's
+    # job, and setup-python would otherwise put its 3.12 first on PATH for
+    # every step after this one -- the job's own Python silently replaced.
+    - uses: actions/setup-python@v6
+      id: python
       with:
         python-version: "3.12"
+        update-environment: false
 
     # Installed from the action's own checkout, so this works whether or not
     # repo-vet is on PyPI, and the version you pinned is the version that runs.
+    # Into a venv of its own under RUNNER_TEMP, so nothing the job installs
+    # later sees it, or is seen by it.
     - name: Install repo-vet
+      id: install
       shell: bash
-      run: python3 -m pip install --quiet "${{ github.action_path }}"
+      env:
+        RV_PYTHON: ${{ steps.python.outputs.python-path }}
+        RV_SOURCE: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        venv="$RUNNER_TEMP/repo-vet-venv"
+        "$RV_PYTHON" -m venv "$venv"
+        py="$venv/bin/python"
+        [ -x "$py" ] || py="$venv/Scripts/python.exe"      # Windows runners
+        "$py" -m pip install --quiet --disable-pip-version-check "$RV_SOURCE"
+        echo "python=$py" >> "$GITHUB_OUTPUT"
 
     - name: Vet
       id: vet
@@ -62,6 +91,8 @@ runs:
         RV_SKIP: ${{ inputs.skip }}
         RV_WEB_LIMIT: ${{ inputs.web-limit }}
         RV_FAIL_ON: ${{ inputs.fail-on }}
+        RV_REF: ${{ inputs.ref }}
+        RV_PY: ${{ steps.install.outputs.python }}
       run: |
         # Actions bu kabugu `-e` ile calistiriyor; `[ -n "" ] && ...` kalibi
         # bos girdide 1 dondugu icin adimi daha basinda oldururdu. `set +e`
@@ -72,6 +103,15 @@ runs:
         bayrak=()
         if [ -n "$RV_ONLY" ]; then bayrak+=(--only "$RV_ONLY"); fi
         if [ -n "$RV_SKIP" ]; then bayrak+=(--skip "$RV_SKIP"); fi
+        # Kendi deposunu denetlerken varsayilan, is akisinin calistigi
+        # commit: yoksa bir PR, README'yi bozsa bile ana dalin README'si
+        # okunarak yesil geciyordu.
+        if [ -z "$RV_REF" ] && [ "$RV_REPOSITORY" = "${GITHUB_REPOSITORY:-}" ]; then
+          RV_REF="${GITHUB_SHA:-}"
+        fi
+        if [ -n "$RV_REF" ]; then bayrak+=(--ref "$RV_REF"); fi
+        rapor="$RUNNER_TEMP/repo-vet.json"
+        rm -f "$rapor"
 
         # TEK tarama. Once uc kosu vardi -- biri JSON icin, biri adim ozeti
         # icin, biri cikis kodu icin -- ve her biri dis baglantilari ayri ayri
@@ -81,15 +121,17 @@ runs:
         # boylece sayi, ozet ve cikis kodu ayni olcumden geliyor.
         # Cikis kodu 3: depo hic okunamadi (yanlis slug, oran siniri,
         # reddedilen jeton). Bulgu yok ama temiz de degil; adim kirmizi yanar.
-        repo-vet "$RV_REPOSITORY" ${bayrak[@]+"${bayrak[@]}"} \
+        "$RV_PY" -m repo_vet \
+          "$RV_REPOSITORY" ${bayrak[@]+"${bayrak[@]}"} \
           --web-limit "$RV_WEB_LIMIT" \
-          --json-out repo-vet.json --markdown \
+          --json-out "$rapor" --markdown \
           --fail-on "$RV_FAIL_ON" >> "$GITHUB_STEP_SUMMARY"
         kod=$?
 
-        if [ -f repo-vet.json ]; then
-          sayi=$(python3 -c "import json;print(sum(r['finding_count'] for r in json.load(open('repo-vet.json'))))")
+        if [ -f "$rapor" ]; then
+          sayi=$("$RV_PY" -c "import json,sys;print(sum(r['finding_count'] for r in json.load(open(sys.argv[1]))))" "$rapor")
           echo "findings=$sayi" >> "$GITHUB_OUTPUT"
+          echo "report=$rapor" >> "$GITHUB_OUTPUT"
         fi
 
         exit "$kod"

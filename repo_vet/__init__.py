@@ -9,6 +9,6 @@ their own README twice.
 This package tries them.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 from .model import Finding, Report            # noqa: F401

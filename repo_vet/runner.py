@@ -3,14 +3,21 @@
 
 import datetime
 
-from .checks import CHECKS, Context
-from .model import Report
+import re
+
+from .checks import CHECKS, Context, NotChecked
+from .model import ISTEKLE, Report
 
 README_GEREKTIREN = ("install", "links", "badges", "web")
 
 
-def vet(slug, client, only=None, skip=None, web_limit=40):
+def vet(slug, client, only=None, skip=None, web_limit=40, ref=None):
     """Check one repository. Returns a Report.
+
+    `ref` -- a branch, tag or commit -- is where the README and files are
+    read. Without it they are read on the default branch. A pull request
+    that breaks its README is only caught if the README being read is the
+    pull request's.
 
     A check that cannot see what it needs is recorded as skipped rather than
     counted as passing: an audit that reports "clean" for something it never
@@ -35,15 +42,32 @@ def vet(slug, client, only=None, skip=None, web_limit=40):
         return rapor
 
     dal = meta.get("default_branch")
-    metin = client.readme(slug, dal)
+    etiket = None
+    if ref:
+        # Resolved to one commit first, so the README, the tree and the
+        # manifest all come from the same snapshot even if the branch moves
+        # mid-run -- and so a mistyped ref is reported as one, instead of as
+        # a repository with no README.
+        sha = client.commit_sha(slug, ref)
+        if sha is None:
+            rapor.skipped.append(("*", "GitHub could not be read"
+                                  + (" (rate limit)" if client.rate_limited else "")))
+            return rapor
+        if not sha:
+            rapor.skipped.append(("*", "no such branch, tag or commit: %s" % ref))
+            return rapor
+        dal = sha
+        etiket = ref[:12] if re.match(r"^[0-9a-f]{40}$", ref) else ref
+    metin, readme_bilinen = client.readme(slug, dal)
     agac, kirpik = client.tree(slug, dal or "HEAD")
     ctx = Context(slug, client, meta=meta, text=metin or "", tree=agac,
-                  tree_truncated=kirpik)
+                  tree_truncated=kirpik, ref=dal if ref else None,
+                  ref_label=etiket)
 
     if metin is None:
-        if client.rate_limited:
-            rapor.skipped.append(("readme", "the README could not be read "
-                                            "(GitHub rate limit)"))
+        if not readme_bilinen or client.rate_limited:
+            rapor.skipped.append(("readme", "the README could not be read"
+                                  + (" (GitHub rate limit)" if client.rate_limited else "")))
         else:
             rapor.skipped.append(("readme", "the repository has no README"))
 
@@ -51,7 +75,7 @@ def vet(slug, client, only=None, skip=None, web_limit=40):
         if only and ad not in only:
             continue
         if skip and ad in skip:
-            rapor.skipped.append((ad, "skipped on request"))
+            rapor.skipped.append((ad, ISTEKLE))
             continue
         if metin is None and ad in README_GEREKTIREN:
             rapor.skipped.append((ad, "needs a README"))
@@ -67,10 +91,14 @@ def vet(slug, client, only=None, skip=None, web_limit=40):
                 rapor.skipped.append(
                     (ad, "the file tree is too large for GitHub to return whole"))
                 continue
-        if ad == "web":
-            bulgular = fn(ctx, limit=web_limit)
-        else:
-            bulgular = fn(ctx)
+        try:
+            if ad == "web":
+                bulgular = fn(ctx, limit=web_limit)
+            else:
+                bulgular = fn(ctx)
+        except NotChecked as e:
+            rapor.skipped.append((ad, str(e)))
+            continue
         rapor.checked.append(ad)
         for b in bulgular:
             rapor.add(b)

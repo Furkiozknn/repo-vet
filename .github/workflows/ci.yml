@@ -24,14 +24,16 @@ concurrency:
 jobs:
   tests:
     name: tests (py${{ matrix.python }})
-    runs-on: ubuntu-latest
+    # 3.9 stays on 24.04: it is past end of life and newer runner images need
+    # not carry it, while pyproject.toml still promises it.
+    runs-on: ${{ matrix.python == '3.9' && 'ubuntu-24.04' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -47,7 +49,7 @@ jobs:
     name: package builds
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v7
       - run: uv build
       - run: uvx twine check dist/*
@@ -59,7 +61,9 @@ jobs:
     name: vets itself
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      # No `ref:` given, so on a pull request the action reads the README of
+      # the commit being tested, not main's: a PR that breaks a link fails here.
       - id: vet
         uses: ./
         with:
@@ -68,15 +72,37 @@ jobs:
       # from the same scan. They used to come from different ones, which is
       # how a summary saying "no findings" could sit next to a failed job.
       - name: The count the action reported agrees with the job passing
+        env:
+          FINDINGS: ${{ steps.vet.outputs.findings }}
+          REPORT: ${{ steps.vet.outputs.report }}
         run: |
           set -eu
-          echo "findings=${{ steps.vet.outputs.findings }}"
-          test -n "${{ steps.vet.outputs.findings }}"
-          test -f repo-vet.json
+          echo "findings=$FINDINGS report=$REPORT"
+          test -n "$FINDINGS"
+          test -f "$REPORT"
+          test ! -e repo-vet.json    # nothing written into the checkout
           python3 - <<'PY'
-          import json
-          d = json.load(open("repo-vet.json", encoding="utf-8"))
+          import json, os
+          d = json.load(open(os.environ["REPORT"], encoding="utf-8"))
           errors = sum(len([f for f in r["findings"] if f["level"] == "error"]) for r in d)
           assert errors == 0, "the step passed with %d errors in its own report" % errors
-          print("report and exit code agree: 0 errors")
+          assert d[0]["checks_run"], "nothing ran, yet the step passed"
+          print("report and exit code agree: 0 errors, ran %s" % d[0]["checks_run"])
           PY
+
+      # The other half of the contract: a repository that cannot be read
+      # must turn the step red (exit 3), not hand CI a green tick.
+      - id: missing
+        uses: ./
+        continue-on-error: true
+        with:
+          repository: Furkiozknn/this-repository-does-not-exist
+      - name: An unreadable repository fails the step
+        env:
+          OUTCOME: ${{ steps.missing.outcome }}
+          FINDINGS: ${{ steps.missing.outputs.findings }}
+        run: |
+          set -eu
+          echo "outcome=$OUTCOME findings=$FINDINGS"
+          test "$OUTCOME" = failure
+          test "$FINDINGS" = 0

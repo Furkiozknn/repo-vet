@@ -34,6 +34,34 @@ KULLANICI = "repo-vet"
 YENIDEN = (500, 502, 503, 504)
 
 
+class _YonlendirmedeJetonuBirak(urllib.request.HTTPRedirectHandler):
+    """Follow redirects, but never carry the token to another origin.
+
+    urllib copies every header of the original request onto the redirected
+    one, `Authorization` included, whatever host the `Location` names. GitHub
+    redirects a renamed repository to another path on api.github.com, which
+    is fine; a redirect that leaves that origin -- another host, another
+    port, or https downgraded to http -- gets the request without the token.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        yeni = urllib.request.HTTPRedirectHandler.redirect_request(
+            self, req, fp, code, msg, headers, newurl)
+        if yeni is not None and _koken(newurl) != _koken(req.full_url):
+            yeni.remove_header("Authorization")
+        return yeni
+
+
+def _koken(url):
+    parca = urllib.parse.urlsplit(url)
+    return (parca.scheme.lower(), (parca.hostname or "").lower(),
+            parca.port or {"http": 80, "https": 443}.get(parca.scheme.lower()))
+
+
+def _varsayilan_acici():
+    return urllib.request.build_opener(_YonlendirmedeJetonuBirak).open
+
+
 class Client(object):
     """A thin, honest HTTP client. One retry for GitHub's own hiccups, no
     caching magic, no surprises."""
@@ -43,7 +71,7 @@ class Client(object):
         self.token = token
         self.timeout = timeout
         self.workers = max(1, workers)
-        self._opener = opener or urllib.request.urlopen
+        self._opener = opener or _varsayilan_acici()
         self._sleep = sleep or time.sleep
         self._cache = {}
         self.rate_limited = False
@@ -155,22 +183,42 @@ class Client(object):
         return yollar, bool(veri.get("truncated"))
 
     def readme(self, slug, ref=None):
+        """(text, known). `(None, True)`: there is no README. `(None, False)`:
+        there may be one, but it could not be read."""
         url = "%s/repos/%s/readme" % (GITHUB_API, slug)
         if ref:
-            url += "?ref=" + urllib.parse.quote(ref)
-        veri, _ = self.json(url, auth=True)
-        if not veri or "content" not in veri:
-            return None
-        return base64.b64decode(veri["content"]).decode("utf-8", "replace")
+            url += "?ref=" + urllib.parse.quote(ref, safe="")
+        return self._icerik(url)
 
     def file_text(self, slug, path, ref=None):
+        """(text, known), with the same meaning as `readme`."""
         url = "%s/repos/%s/contents/%s" % (GITHUB_API, slug, urllib.parse.quote(path))
         if ref:
-            url += "?ref=" + urllib.parse.quote(ref)
-        veri, _ = self.json(url, auth=True)
-        if not veri or "content" not in veri:
-            return None
-        return base64.b64decode(veri["content"]).decode("utf-8", "replace")
+            url += "?ref=" + urllib.parse.quote(ref, safe="")
+        return self._icerik(url)
+
+    def _icerik(self, url):
+        veri, bilinen = self.json(url, auth=True)
+        if veri is None:
+            return None, bilinen
+        if not isinstance(veri, dict) or "content" not in veri:
+            return None, True             # a directory or a submodule, not a file
+        try:
+            return base64.b64decode(veri["content"]).decode("utf-8", "replace"), True
+        except (TypeError, ValueError):
+            return None, False
+
+    def commit_sha(self, slug, ref):
+        """The commit `ref` names: its SHA, `""` when there is no such ref,
+        `None` when GitHub could not be asked."""
+        kod, govde = self._get("%s/repos/%s/commits/%s"
+                               % (GITHUB_API, slug, urllib.parse.quote(ref, safe="")),
+                               accept="application/vnd.github.sha", auth=True)
+        if kod == 200 and govde:
+            return govde.decode("ascii", "replace").strip()
+        if kod in (404, 422):
+            return ""
+        return None
 
     def tags(self, slug):
         """Tag objects, `[]` when there are none, `None` when unknown."""

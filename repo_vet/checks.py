@@ -20,22 +20,39 @@ from . import readme as md
 SURUM_PYPROJECT = re.compile(r'^\s*version\s*=\s*"([^"]+)"', re.M)
 
 
+class NotChecked(Exception):
+    """Raised by a check that could not read what it needs.
+
+    Returning no findings would put the check in the "ran" column and let the
+    report call the repository clean on its behalf. Raising puts it in the
+    "not checked" column with the reason, which is the truth.
+    """
+
+
 class Context(object):
     """What every check is allowed to look at."""
 
     def __init__(self, slug, client, meta=None, text=None, tree=None,
-                 tree_truncated=False):
+                 tree_truncated=False, ref=None, ref_label=None):
         self.slug = slug
         self.client = client
         self.meta = meta or {}
         self.text = text or ""
         self.tree = tree
         self.tree_truncated = tree_truncated
+        self.ref = ref                    # what the files are read at
+        self.ref_label = ref_label        # how that is shown in evidence
         self.owner, _, self.name = slug.partition("/")
 
     @property
     def branch(self):
-        return self.meta.get("default_branch") or "main"
+        """The ref files are read at: `--ref` if one was given, otherwise
+        the default branch."""
+        return self.ref or self.meta.get("default_branch") or "main"
+
+    @property
+    def shown_ref(self):
+        return self.ref_label or self.branch
 
 
 # --------------------------------------------------------------------------
@@ -94,14 +111,14 @@ def check_links(ctx):
             out.append(Finding(
                 "links",
                 "README links to `%s`, which is not in the repository." % yol,
-                "%s@%s has no such path" % (ctx.slug, ctx.branch)))
+                "%s@%s has no such path" % (ctx.slug, ctx.shown_ref)))
         else:
             out.append(Finding(
                 "links",
                 "README links to `%s`, which is not in the repository; on "
                 "GitHub that link 404s. If it is a documentation-site route, "
                 "an absolute URL would survive both places." % yol,
-                "%s@%s has no such path" % (ctx.slug, ctx.branch), UYARI))
+                "%s@%s has no such path" % (ctx.slug, ctx.shown_ref), UYARI))
     return out
 
 
@@ -137,13 +154,22 @@ def check_badges(ctx):
 
 
 def declared_version(ctx):
-    """The version the project declares, and where it says it."""
-    metin = ctx.client.file_text(ctx.slug, "pyproject.toml", ctx.branch)
+    """The version the project declares, and where it says it.
+
+    Raises NotChecked when a manifest may exist but could not be read: "no
+    declared version" is a statement about the repository, and a timeout is
+    not evidence for it.
+    """
+    metin, bilinen = ctx.client.file_text(ctx.slug, "pyproject.toml", ctx.branch)
+    if not bilinen:
+        raise NotChecked("pyproject.toml could not be read")
     if metin:
         m = SURUM_PYPROJECT.search(metin)
         if m:
             return m.group(1), "pyproject.toml"
-    metin = ctx.client.file_text(ctx.slug, "package.json", ctx.branch)
+    metin, bilinen = ctx.client.file_text(ctx.slug, "package.json", ctx.branch)
+    if not bilinen:
+        raise NotChecked("package.json could not be read")
     if metin:
         m = re.search(r'"version"\s*:\s*"([^"]+)"', metin)
         if m and m.group(1) != "0.0.0":
@@ -192,7 +218,8 @@ def check_release(ctx):
         return out                        # mid-development; nothing to say
     etiketler = ctx.client.tags(ctx.slug)
     if etiketler is None:
-        return out                        # could not ask; not "never tagged"
+        # Could not ask. Not "never tagged" -- and not a clean pass either.
+        raise NotChecked("the tag list could not be read")
     adlar = [t.get("name", "") for t in etiketler]
     if not adlar:
         out.append(Finding(
@@ -204,8 +231,10 @@ def check_release(ctx):
     eslesen = _tag_matches(surum, adlar)
     if not eslesen:
         return out                        # between releases: normal
-    yayinda = set(r.get("tag_name", "") for r in ctx.client.releases(ctx.slug) or []
-                  if not r.get("draft"))
+    yayinlar = ctx.client.releases(ctx.slug)
+    if yayinlar is None:
+        raise NotChecked("the release list could not be read")
+    yayinda = set(r.get("tag_name", "") for r in yayinlar if not r.get("draft"))
     if yayinda and not any(e in yayinda for e in eslesen):
         out.append(Finding(
             "release",
