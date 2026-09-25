@@ -15,9 +15,10 @@
   "technologies": [
     "Python 3.9+",
     "GitHub REST API",
-    "standard library only"
+    "standard library only",
+    "GitHub Actions (composite action)"
   ],
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "MIT",
   "topics": [
     "ci",
@@ -37,8 +38,9 @@
   "key_features": [
     "Checks a README's install commands against PyPI and npm, so the first command a visitor runs is one that still resolves",
     "Only fenced code blocks count as instructions: a sentence mentioning a command is discussing it, not asking anyone to run it",
-    "Says nothing when it cannot see - an unreachable registry, a rate limit or a tree GitHub truncated is reported as not checked, never as clean",
-    "Checked against 29 public repositories that disagree with each other; every false positive it produced is now a named test"
+    "Says nothing when it cannot see - an unreachable registry, a rate limit, an unreadable README or tag list, or a tree GitHub truncated is reported as not checked, never as clean (exit 3 when nothing could be read)",
+    "Checked against 29 public repositories that disagree with each other; every false positive it produced is now a named test",
+    "As a GitHub Action it vets the commit under test, so a pull request that breaks its own README fails that pull request"
   ],
   "media": {
     "hero": "assets/banner.svg",
@@ -49,10 +51,10 @@
     "videos": []
   },
   "tests": {
-    "count": 127,
+    "count": 154,
     "framework": "unittest via pytest",
     "command": "python3 -m pytest tests -q",
-    "evidence": "127 passed"
+    "evidence": "154 passed"
   },
   "ci": {
     "workflows": [
@@ -67,7 +69,7 @@
     "version_history": null,
     "roadmap": null,
     "security": "SECURITY.md",
-    "contributing": null,
+    "contributing": "CONTRIBUTING.md",
     "license_file": "LICENSE"
   },
   "social": {

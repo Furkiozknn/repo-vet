@@ -26,22 +26,32 @@ $ repo-vet Furkiozknn/prompt-template-manager Furkiozknn/Furkiozknn
 Furkiozknn/prompt-template-manager  1 finding, 0 of them errors
 
 Release chain
-  ! `pyproject.toml` declares version 0.1.0, but the repository has no tags.
+  ! `pyproject.toml` declares version 0.1.0, but the repository has never been tagged.
       pyproject.toml -> 0.1.0, tags -> none
 
 Furkiozknn/Furkiozknn  clean (6 checks)
 ```
 
-That is real output, not a mock-up.
+That is real output, not a mock-up (re-run on 25 September 2026).
+
+**Try it on your own repository** — nothing to install but `uv`, and no
+token needed for a public repository:
+
+```bash
+uvx --from git+https://github.com/Furkiozknn/repo-vet repo-vet OWNER/NAME
+```
+
+Exit code `0` means every check that ran passed, `1` means an error-level
+finding, `3` means the repository could not be read — [the full table](#use-it).
 
 ## Status
 
 | | |
 |---|---|
-| Version | 0.1.0 |
-| Python | 3.9 – 3.13 |
+| Version | 0.2.0 on `main`; latest tag [`v0.1.0`](https://github.com/Furkiozknn/repo-vet/releases/tag/v0.1.0) |
+| Python | 3.9 – 3.14 |
 | Runtime dependencies | none |
-| Tests | 127, offline |
+| Tests | 154, offline |
 | Checked against | 29 public repositories ([`corpus.txt`](corpus.txt)) |
 | Licence | MIT |
 
@@ -52,7 +62,7 @@ That is real output, not a mock-up.
 | `install` | the install command in a fenced code block resolves | a distribution renamed, never published, or published under another name |
 | `links` | relative links and images exist in the tree | a file moved and the link stayed |
 | `badges` | a status badge points at a workflow that exists and has run | a renamed workflow makes the badge render *"no status"*, not red |
-| `release` | the release chain finished | the newest tag has no Release; a declared version was never tagged |
+| `release` | the release chain finished | a finished version is declared but nothing was ever tagged; the tag carrying the declared version has no Release while other tags do |
 | `web` | outbound links still answer | 404 and 410 only — a 403 means a host declined to talk to a script, which says nothing |
 | `pages` | the advertised site is alive, and a live site is advertised | a dead homepage, or a live GitHub Pages site nobody is told about |
 
@@ -74,8 +84,10 @@ finding less believable. The same applies upward: if PyPI cannot be reached,
 the install check says nothing rather than announcing a distribution as
 unpublished; if GitHub truncates a tree — `torvalds/linux` comes back with
 71,638 paths and a flag saying there are more — the link and badge checks step
-aside instead of calling good files missing. Anything unseen is reported as
-*not checked*, never as clean.
+aside instead of calling good files missing; if the README, a manifest or the
+tag list cannot be read, the check that needed it is listed as not checked
+rather than counted as passed. Anything unseen is reported as *not checked*,
+never as clean.
 
 ## Checked against repositories that disagree with each other
 
@@ -96,7 +108,7 @@ repositories, one of them an error**, and each one was checked by hand:
 | `axios/axios` | badge points at `ci.yml` | the workflow is `run-ci.yml`; the badge renders *"no status"* |
 | `tiangolo/fastapi` | `tutorial/` is not in the tree | true on GitHub; it is a route on the documentation site |
 | `sindresorhus/awesome` | Pages site live, homepage field empty | both true |
-| `Furkiozknn/repo-vet` | declares 0.1.0, never tagged | true, and this repository's own |
+| `Furkiozknn/repo-vet` | declares 0.1.0, never tagged | true, and this repository's own (tagged `v0.1.0` the same day) |
 
 Three rules exist because a repository in that list disproved the general
 version: "the newest tag" (the tags API returned `v0.1.16` as the newest tag
@@ -132,6 +144,7 @@ repo-vet OWNER/NAME --only install,links  # just the two that break most often
 repo-vet OWNER/NAME --json                # machine-readable
 repo-vet OWNER/NAME --markdown            # a GitHub step summary
 repo-vet OWNER/NAME --json-out r.json --markdown   # both, from one scan
+repo-vet OWNER/NAME --ref my-branch       # read the README on a branch, tag or commit
 ```
 
 A token is optional for public repositories. `--token`, `GITHUB_TOKEN` or
@@ -147,22 +160,42 @@ asked once more; outbound links never are.
 |---|---|
 | `0` | nothing to report (warnings alone never fail a run — `--fail-on any` if you want them to) |
 | `1` | findings, as `--fail-on` defines them |
-| `2` | bad usage: an unknown check, a malformed slug, an unreadable `--from-file` |
-| `3` | a repository could not be read at all — a mistyped slug, a rate limit, a rejected token. It has no findings because nothing was looked at, and that is not the same as clean |
+| `2` | bad usage: an unknown check, a malformed slug or ref, an unreadable `--from-file` |
+| `3` | a repository could not be read at all — a mistyped slug, a ref that does not exist, a rate limit, a rejected token — or nothing the requested checks needed could be read. It has no findings because nothing was looked at, and that is not the same as clean |
 
 `--fail-on none` exits `0` in every case except bad usage.
 
 ## Use it in CI
 
 ```yaml
-- uses: Furkiozknn/repo-vet@main
-  with:
-    fail-on: error
+permissions:
+  contents: read
+steps:
+  - uses: Furkiozknn/repo-vet@main   # or pin a release tag or a commit SHA
+    with:
+      fail-on: error
 ```
 
 The action writes the findings into the job summary and installs the tool from
-its own checkout, so the version you pin is the version that runs. This
-repository's own CI does exactly this, against itself.
+its own checkout into a venv under `RUNNER_TEMP`, so the version you pin is the
+version that runs and your job's own Python is left alone. This repository's
+own CI does exactly this, against itself — and checks that a repository that
+does not exist turns the step red.
+
+When it checks the repository the workflow runs in, it reads the README **at
+the commit being tested**, so on a pull request it vets the pull request, not
+`main`. For any other repository it reads the default branch.
+
+| Input | Default | |
+|---|---|---|
+| `repository` | the workflow's repository | `OWNER/NAME` |
+| `ref` | the commit under test (own repository), else the default branch | branch, tag or commit |
+| `token` | `github.token` | needs no more than `contents: read` for a public repository |
+| `only` / `skip` | — | comma-separated check names |
+| `fail-on` | `error` | `error`, `any` or `none` |
+| `web-limit` | `40` | how many outbound links to try |
+
+Outputs: `findings` (the count) and `report` (the path of the JSON report).
 
 It scans **once**. That is worth saying because it used to scan three times —
 once for the JSON, once for the summary, once for the exit code — and each pass
@@ -199,9 +232,15 @@ cd repo-vet
 PYTHONPATH=. python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-127 tests, standard library only, never touching the network: the GitHub API,
+154 tests, standard library only, never touching the network: the GitHub API,
 PyPI and npm are all behind one small client that the tests replace with a
-dictionary. A linter you cannot run on a train is a linter you stop running.
+dictionary. (The redirect tests start two servers on `127.0.0.1`, and the
+Action tests run its shell step under `bash`; neither leaves the machine.)
+A linter you cannot run on a train is a linter you stop running.
+`python3 -m pytest tests -q` runs the same suite.
+
+Contributions: see [CONTRIBUTING.md](CONTRIBUTING.md). Security reports:
+[SECURITY.md](SECURITY.md).
 
 Before a release, the corpus above is run by hand. It needs the network and a
 GitHub token, so it is deliberately not part of CI — a suite that fails

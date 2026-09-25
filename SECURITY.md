@@ -26,9 +26,14 @@ It is easier to judge a report against a surface that is written down.
   install, import or execute anything. It reads text over HTTPS and matches it
   against patterns.
 - **The token** (`--token`, `GITHUB_TOKEN` or `GH_TOKEN`) is sent only with
-  requests to `api.github.com`, and to wherever GitHub's own API redirects
-  them. It is never sent to PyPI, npm, or any URL taken from a README. It is
-  never written to the report, the JSON file or the step summary.
+  requests to `api.github.com`. If GitHub answers with a redirect to another
+  origin (host, port or scheme), the redirected request goes without it. It
+  is never sent to PyPI, npm, or any URL taken from a README. It is never
+  written to the report, the JSON file or the step summary.
+- **Slugs and refs are validated** before any request: an `OWNER/NAME` or a
+  `--ref` containing `..`, `?`, `#`, `%`, spaces or other characters GitHub
+  does not allow is refused with exit `2`, so neither can redirect a request
+  that carries the token to another API path.
 - **Hosts contacted:** `api.github.com`, `pypi.org`, `registry.npmjs.org`, the
   repository's homepage and its `github.io` address, and — only for the `web`
   check — the outbound links in the README, up to `--web-limit` of them
@@ -37,8 +42,11 @@ It is easier to judge a report against a surface that is written down.
 - **Files written:** only the path given to `--json-out`.
 - **The GitHub Action** passes its inputs to the script as environment
   variables, not by `${{ }}` substitution, so an input value is never parsed
-  as shell code. Its default token is the job's own `github.token`; for a
-  public repository it needs no more than `contents: read`.
+  as shell code (a test runs the step with a hostile input to hold it to
+  that). It installs into a venv under `RUNNER_TEMP` and writes its report
+  there, and does not change the job's Python. Its default token is the
+  job's own `github.token`; for a public repository it needs no more than
+  `contents: read`.
 
 ## Out of scope
 

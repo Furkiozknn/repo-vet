@@ -1,0 +1,12 @@
+# repo-vet has no runtime dependencies, so the only things that go stale are
+# the actions its workflows and its own action.yml use.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
