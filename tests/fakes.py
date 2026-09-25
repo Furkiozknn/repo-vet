@@ -16,7 +16,7 @@ class FakeClient(object):
     def __init__(self, repo=None, repo_known=True, readme=None, tree=None,
                  tree_truncated=False, files=None, tags=None, releases=None,
                  runs=None, statuses=None, pypi=None, npm=None,
-                 rate_limited=False):
+                 rate_limited=False, cargo=None):
         self._repo = repo
         self._repo_known = repo_known
         self._readme = readme
@@ -29,6 +29,7 @@ class FakeClient(object):
         self._statuses = statuses or {}
         self._pypi = pypi if pypi is not None else {}
         self._npm = npm if npm is not None else {}
+        self._cargo = cargo if cargo is not None else {}
         self.rate_limited = rate_limited
         self.asked = []
 
@@ -72,4 +73,9 @@ class FakeClient(object):
         if self._npm is None:
             return None
         deger = self._npm.get(name, [])
+        return None if deger is None else set(deger)
+
+    def cargo_versions(self, name):
+        self.asked.append("cargo:" + name)
+        deger = self._cargo.get(name, [])
         return None if deger is None else set(deger)

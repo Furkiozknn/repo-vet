@@ -30,6 +30,15 @@ NPM = re.compile(
     r"(?:npm\s+(?:install|exec|i)\b|npx\b|pnpm\s+(?:add|dlx)\b"
     r"|yarn\s+add\b|bunx\b|bun\s+add\b)"
     r"([^\n`]*)")
+CARGO = re.compile(r"cargo\s+install\b([^\n`]*)")
+
+# Cargo options that take a value before the crate name. `--git` and `--path`
+# are handled separately because they install from a source, not crates.io.
+CARGO_YUTAN = {"--vers", "--version", "--root", "--target", "--target-dir",
+               "--index", "--registry", "--bin", "--example", "--features",
+               "-F", "--jobs", "-j", "--profile", "--branch", "--tag",
+               "--rev", "--git", "--path", "--config", "--message-format",
+               "--color"}
 
 # Flags that swallow the following word: what comes after is a file or a
 # path, never a distribution name.
@@ -116,6 +125,48 @@ def npm_installs(text):
         ad = _distribution(tail, scoped_ok=True)
         if ad and ad not in ("install", "add", "dlx", "exec"):
             out.add(ad)
+    return out
+
+
+def cargo_installs(text):
+    """Crate names a README's code blocks tell you to install from crates.io."""
+    out = set()
+    for tail in CARGO.findall(code_blocks(text)):
+        parts = tail.split()
+        # A git or local path source is not looked up on crates.io, even if a
+        # package name follows the source option.
+        source_options = {part.split("=", 1)[0] for part in parts}
+        if "--git" in source_options or "--path" in source_options:
+            continue
+        registry = None
+        index = None
+        for i, part in enumerate(parts):
+            option, separator, value = part.partition("=")
+            if option == "--registry":
+                registry = value if separator else (parts[i + 1]
+                                                     if i + 1 < len(parts) else None)
+            elif option == "--index":
+                index = value if separator else (parts[i + 1]
+                                                  if i + 1 < len(parts) else None)
+        if registry is not None and registry != "crates-io":
+            continue
+        if index is not None and index not in (
+                "sparse+https://index.crates.io/",
+                "https://github.com/rust-lang/crates.io-index"):
+            continue
+        i = 0
+        while i < len(parts):
+            part = parts[i]
+            if part.startswith("-"):
+                if part.split("=", 1)[0] in CARGO_YUTAN and "=" not in part:
+                    i += 2
+                else:
+                    i += 1
+                continue
+            name = _distribution(part)
+            if name:
+                out.add(name)
+            i += 1
     return out
 
 

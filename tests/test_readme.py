@@ -101,6 +101,40 @@ class NpmInstalls(unittest.TestCase):
         self.assertEqual(md.npm_installs(blok("npm install ./local")), set())
 
 
+class CargoInstalls(unittest.TestCase):
+    def test_plain_and_version_option_forms(self):
+        self.assertEqual(md.cargo_installs(blok(
+            "cargo install ripgrep", "cargo install --version 1.0.0 fd-find")),
+            {"ripgrep", "fd-find"})
+
+    def test_git_and_path_sources_are_not_crates_io(self):
+        self.assertEqual(md.cargo_installs(blok(
+            "cargo install --git https://github.com/o/r unpublished",
+            "cargo install --path ./local-crate",
+            "cargo install --git=https://github.com/o/r unpublished",
+            "cargo install --path=./local-crate")), set())
+
+    def test_prose_is_not_an_instruction(self):
+        text = "Use `cargo install ghost` after publishing.\n" + blok(
+            "cargo install real-crate")
+        self.assertEqual(md.cargo_installs(text), {"real-crate"})
+
+    def test_other_cargo_options_before_crate_are_skipped(self):
+        self.assertEqual(md.cargo_installs(blok(
+            "cargo install --locked --registry crates-io cargo-audit")),
+            {"cargo-audit"})
+
+    def test_multiple_crates_are_found(self):
+        self.assertEqual(md.cargo_installs(blok(
+            "cargo install ripgrep fd-find")), {"ripgrep", "fd-find"})
+
+    def test_custom_registries_are_not_checked_against_crates_io(self):
+        self.assertEqual(md.cargo_installs(blok(
+            "cargo install --registry company-registry internal-tool",
+            "cargo install --index https://example.test/index private-tool")),
+            set())
+
+
 class LocalTargets(unittest.TestCase):
     def _yollar(self, metin):
         return set(y for y, _ in md.local_targets(metin))
