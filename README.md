@@ -42,7 +42,7 @@ That is real output, not a mock-up.
 | Python | 3.9 – 3.13 |
 | Runtime dependencies | none |
 | Tests | 127, offline |
-| Checked against | 30 public repositories ([`corpus.txt`](corpus.txt)) |
+| Checked against | 29 public repositories ([`corpus.txt`](corpus.txt)) |
 | Licence | MIT |
 
 ## What it checks
@@ -80,7 +80,7 @@ aside instead of calling good files missing. Anything unseen is reported as
 ## Checked against repositories that disagree with each other
 
 A linter is only worth running if a clean result means something. These are
-the thirty repositories in [`corpus.txt`](corpus.txt) — Python, Rust, Go and
+the twenty-nine repositories in [`corpus.txt`](corpus.txt) — Python, Rust, Go and
 TypeScript, monorepos and single crates, documentation repositories with no
 code, a tree too large for GitHub to return whole:
 
@@ -88,7 +88,7 @@ code, a tree too large for GitHub to return whole:
 repo-vet --from-file corpus.txt --skip web
 ```
 
-On 22 September 2026 that produced **four findings across thirty
+On 22 September 2026 that produced **four findings across twenty-nine
 repositories, one of them an error**, and each one was checked by hand:
 
 | Repository | Finding | Verified |
