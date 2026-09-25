@@ -3,8 +3,7 @@
 # They are here because they disagree with each other: Python and Rust and
 # Go and TypeScript, monorepos and single crates, documentation repositories
 # with no code, a repository with no releases at all, a tree too large for
-# GitHub to return whole, a private one, an archived one, and one that does
-# not exist. Every rule in checks.py that looks oddly specific was written
+# GitHub to return whole, and this repository itself. Every rule in checks.py that looks oddly specific was written
 # because one of these proved the general version wrong.
 #
 #   repo-vet --from-file corpus.txt --skip web
