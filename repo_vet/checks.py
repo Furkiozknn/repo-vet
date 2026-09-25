@@ -69,6 +69,16 @@ def check_install(ctx):
                 "README tells you to install `%s` from npm, but no such "
                 "package is published there." % ad,
                 "registry.npmjs.org/%s -> 404" % ad))
+    for ad in sorted(md.cargo_installs(ctx.text)):
+        surumler = ctx.client.cargo_versions(ad)
+        if surumler is None:
+            continue
+        if not surumler:
+            out.append(Finding(
+                "install",
+                "README tells you to install `%s` from crates.io, but no such "
+                "crate is published there." % ad,
+                "crates.io/crates/%s -> 404" % ad))
     return out
 
 

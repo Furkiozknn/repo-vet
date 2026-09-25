@@ -54,6 +54,28 @@ class Install(unittest.TestCase):
         c = ctx(blok("npm install x"), npm={"x": None})
         self.assertEqual(checks.check_install(c), [])
 
+    def test_unpublished_cargo_crate_is_an_error(self):
+        c = ctx(blok("cargo install ghost-crate"), cargo={})
+        (f,) = checks.check_install(c)
+        self.assertEqual(f.check, "install")
+        self.assertEqual(f.level, HATA)
+        self.assertIn("ghost-crate", f.message)
+        self.assertIn("crates.io", f.evidence)
+
+    def test_published_cargo_crate_is_quiet(self):
+        c = ctx(blok("cargo install serde"), cargo={"serde": ["1.0.0"]})
+        self.assertEqual(checks.check_install(c), [])
+
+    def test_unanswerable_cargo_registry_is_not_missing(self):
+        c = ctx(blok("cargo install serde"), cargo={"serde": None})
+        self.assertEqual(checks.check_install(c), [])
+
+    def test_git_and_path_installs_are_not_checked_against_crates_io(self):
+        c = ctx(blok(
+            "cargo install --git https://github.com/o/r unpublished",
+            "cargo install --path ./local-crate"), cargo={})
+        self.assertEqual(checks.check_install(c), [])
+
     def test_nothing_to_install_is_quiet(self):
         self.assertEqual(checks.check_install(ctx("no code here")), [])
 
