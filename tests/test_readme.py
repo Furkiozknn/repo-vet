@@ -129,6 +129,14 @@ class LocalTargets(unittest.TestCase):
     def test_leading_dot_slash_is_normalised(self):
         self.assertEqual(self._yollar("[x](./LICENSE)"), {"LICENSE"})
 
+    def test_a_dotfile_keeps_its_dot(self):
+        # Stripping "./" as a set of characters also ate the dot that is
+        # part of the name: `.github/workflows/ci.yml` became
+        # `github/workflows/ci.yml`, a path no repository has.
+        self.assertEqual(self._yollar("[ci](.github/workflows/ci.yml)"),
+                         {".github/workflows/ci.yml"})
+        self.assertEqual(self._yollar("[x](./.env.example)"), {".env.example"})
+
     def test_percent_encoding_is_decoded(self):
         self.assertEqual(self._yollar("[x](docs/my%20guide.md)"),
                          {"docs/my guide.md"})

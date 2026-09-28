@@ -17,6 +17,11 @@
   with nothing in the output to explain the contradiction. One pass now
   produces the file, the summary and the exit code.
 
+### Fixed
+
+- A relative link to a dotfile or dot-directory (`.github/workflows/ci.yml`,
+  `.env.example`) lost its leading dot and was reported missing as an error.
+
 Format close to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow [Semantic Versioning](https://semver.org/).
 
