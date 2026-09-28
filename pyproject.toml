@@ -1,6 +1,6 @@
 [project]
 name = "repo-vet"
-version = "0.1.0"
+version = "0.2.0"
 description = "Checks what a GitHub repository claims about itself against what is actually there."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -21,6 +21,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Software Development :: Quality Assurance",
 ]
 # No runtime dependencies, on purpose: a tool that audits other projects'
