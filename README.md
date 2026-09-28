@@ -2,6 +2,9 @@
 
 # repo-vet
 
+<p align="center"><img src="docs/reel/reel.gif" alt="repo-vet - 15-second motion reel" width="720"></p>
+<p align="center"><sub><a href="docs/reel/reel.mp4">MP4 version with sound</a></sub></p>
+
 **Your README is a promise. This checks whether you can still keep it.**
 
 [![CI](https://github.com/Furkiozknn/repo-vet/actions/workflows/ci.yml/badge.svg)](https://github.com/Furkiozknn/repo-vet/actions/workflows/ci.yml)
