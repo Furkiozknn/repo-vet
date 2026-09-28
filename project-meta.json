@@ -51,10 +51,9 @@
     "videos": []
   },
   "tests": {
-    "count": 155,
-    "framework": "unittest via pytest",
-    "command": "python3 -m pytest tests -q",
-    "evidence": "155 passed"
+    "count": 157,
+    "source": "CI log: `Ran 157 tests in 1.691s`",
+    "measured": "2026-09-28"
   },
   "ci": {
     "workflows": [
