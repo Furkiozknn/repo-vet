@@ -82,6 +82,13 @@ class Links(unittest.TestCase):
         c = ctx("[dir](examples/)", tree={"examples/a.yaml"})
         self.assertEqual(checks.check_links(c), [])
 
+    def test_present_dotfile(self):
+        # A README linking its own CI workflow was told the file did not
+        # exist, because the leading dot of `.github` was stripped.
+        c = ctx("[ci](.github/workflows/ci.yml)",
+                tree={".github/workflows/ci.yml"})
+        self.assertEqual(checks.check_links(c), [])
+
     def test_percent_encoded_target(self):
         c = ctx("[x](docs/my%20guide.md)", tree={"docs/my guide.md"})
         self.assertEqual(checks.check_links(c), [])

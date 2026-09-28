@@ -42,7 +42,7 @@ jobs:
       # never touches the network, so it runs the same on a train.
       - name: Run the suite
         env:
-          TEST_TABANI: "155"
+          TEST_TABANI: "157"
         run: |
           set -euo pipefail
           PYTHONPATH=. python -Werror::ResourceWarning -m unittest discover -s tests -p "test_*.py" -v 2>&1 | tee ciktisi.txt

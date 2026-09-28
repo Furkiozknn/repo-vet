@@ -62,6 +62,8 @@ reads the pull request's README instead of the default branch's.
 
 ### Fixed
 
+- A relative link to a dotfile or dot-directory (`.github/workflows/ci.yml`,
+  `.env.example`) lost its leading dot and was reported missing as an error.
 - **A repository nobody could read passed as clean.** A mistyped slug, a rate
   limit, a rejected token or GitHub being down printed `clean (0 checks)` —
   `Clean. 0 checks ran: .` in the step summary — and exited `0`, so the Action
@@ -93,8 +95,8 @@ reads the pull request's README instead of the default branch's.
 
 ### Measured
 
-**155 tests**, standard library only, no network in any of them, on Python
-3.9 through 3.14 (`python3 -m pytest tests -q` → `155 passed`).
+**157 tests**, standard library only, no network in any of them, on Python
+3.9 through 3.14 (`python3 -m pytest tests -q` → `157 passed`).
 
 ---
 
