@@ -156,8 +156,11 @@ def local_targets(text):
         if yol.startswith("../"):
             # Escapes the repository root; nothing here can confirm it.
             continue
-        yol = yol.lstrip("./")
-        if not yol:
+        # Remove "./" as a prefix, not "." and "/" as characters: the latter
+        # also ate the dot of `.github/...` and reported a real file missing.
+        while yol.startswith("./"):
+            yol = yol[2:].lstrip("/")
+        if not yol or yol == ".":
             continue
         taban = yol.rstrip("/").rsplit("/", 1)[-1]
         dosya_gibi = "." in taban and not yol.endswith("/")
