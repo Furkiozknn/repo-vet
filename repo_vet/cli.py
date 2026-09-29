@@ -13,10 +13,34 @@ from .runner import vet
 from .sources import Client
 
 
+EPILOG = """\
+examples:
+  repo-vet OWNER/NAME                       check one repository (no token needed for a public one)
+  repo-vet psf/requests --skip web          skip the slow outbound-link pass
+  repo-vet OWNER/NAME --only install,links  just those checks
+  repo-vet --from-file corpus.txt           many repositories, one slug per line
+  repo-vet OWNER/NAME --json                machine-readable output
+
+repo-vet reads a repository over the GitHub API. It does not clone anything and
+does not scan a local folder.
+
+exit codes:
+  0  nothing to report (warnings alone never fail a run; --fail-on any changes that)
+  1  findings, as --fail-on defines them
+  2  bad usage: an unknown check, a malformed slug or ref, an unreadable --from-file
+  3  a repository could not be read at all (mistyped slug, missing ref, rate limit,
+     rejected token, no network). Nothing was looked at, which is not the same as clean
+"""
+
+EXAMPLE = "repo-vet Furkiozknn/repo-vet"
+
+
 def _parser():
     p = argparse.ArgumentParser(
         prog="repo-vet",
-        description="Check what a GitHub repository claims against what is there.")
+        description="Check what a GitHub repository claims against what is there: "
+                    "install commands, links, badges, releases and published sites.",
+        epilog=EPILOG, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("repos", nargs="*", metavar="OWNER/NAME")
     p.add_argument("--from-file", dest="from_file", default=None, metavar="PATH",
                    help="read OWNER/NAME slugs from a file, one per line; "
@@ -43,7 +67,8 @@ def _parser():
                    help="what makes the exit code non-zero (default: error). "
                         "Exit codes: 0 clean, 1 findings, 2 bad usage, "
                         "3 a repository could not be read at all")
-    p.add_argument("--timeout", type=int, default=20)
+    p.add_argument("--timeout", type=int, default=20,
+                   help="seconds to wait for each GitHub request (default 20)")
     p.add_argument("--version", action="version", version="repo-vet " + __version__)
     return p
 
@@ -66,6 +91,24 @@ def slug_ok(slug):
 def ref_ok(ref):
     return bool(REF.match(ref)) and ".." not in ref and "@{" not in ref \
         and not ref.startswith(("/", "-")) and not ref.endswith("/")
+
+
+def slug_hint(slug):
+    """One line saying what to type instead of a slug that is not OWNER/NAME.
+
+    The likeliest first mistakes are a pasted URL, a clone URL, a bare name or
+    a folder: each gets the command that would have worked.
+    """
+    m = re.match(r"^(?:https?://(?:www\.)?github\.com/|git@github\.com:)"
+                 r"([A-Za-z0-9._-]+)/([A-Za-z0-9._-]+?)(?:\.git)?(?:[/#?].*)?$", slug)
+    if m:
+        return "repo-vet %s/%s" % (m.group(1), m.group(2))
+    if slug in (".", "..") or "\\" in slug or slug.startswith(("./", "../", "~")):
+        return ("repo-vet reads a repository over the GitHub API and does not scan "
+                "a local folder; name the repository as OWNER/NAME, e.g. " + EXAMPLE)
+    if slug.endswith("/") and slug_ok(slug.rstrip("/")):
+        return "repo-vet " + slug.rstrip("/")
+    return "a repository is OWNER/NAME, e.g. " + EXAMPLE
 
 
 def _liste(deger):
@@ -96,14 +139,16 @@ def main(argv=None):
             sys.stderr.write("cannot read %s: %s\n" % (args.from_file, e))
             return 2
     if not slugs:
-        sys.stderr.write("nothing to check: pass OWNER/NAME or --from-file\n")
+        sys.stderr.write("nothing to check: pass OWNER/NAME or --from-file\n"
+                         "try: %s\n(repo-vet --help lists every option)\n" % EXAMPLE)
         return 2
 
     # Every slug is checked before any network work: a typo on line 30 of a
     # --from-file list should not cost twenty-nine scans and then no report.
     for slug in slugs:
         if not slug_ok(slug):
-            sys.stderr.write("not an OWNER/NAME slug: %s\n" % slug)
+            sys.stderr.write("not an OWNER/NAME slug: %s\nhint: %s\n"
+                             % (slug, slug_hint(slug)))
             return 2
     if args.ref is not None and not ref_ok(args.ref):
         sys.stderr.write("not a branch, tag or commit: %s\n" % args.ref)

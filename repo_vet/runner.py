@@ -35,9 +35,12 @@ def vet(slug, client, only=None, skip=None, web_limit=40, ref=None):
             rapor.skipped.append(("*", _rate_limit_reason(client)))
         elif bilinen:
             rapor.skipped.append(("*", "no such repository, or not visible "
-                                       "with this token"))
+                                       "with this token; check the spelling, "
+                                       "a private repository needs --token or "
+                                       "GITHUB_TOKEN"))
         else:
-            rapor.skipped.append(("*", "GitHub could not be read"))
+            rapor.skipped.append(("*", "GitHub could not be read (no network, a "
+                                       "proxy in the way, or a GitHub outage)"))
         return rapor
 
     dal = meta.get("default_branch")

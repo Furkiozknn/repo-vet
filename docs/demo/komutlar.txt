@@ -1,0 +1,36 @@
+# repo-vet terminal demo: real commands, real output
+# tarih: 2026-09-30T01:09:49+03:00
+# surum: 0.2.0 (pip install . ile kuruldu, PATH'teki repo-vet)
+# denetlenenler: Furkiozknn/prompt-template-manager, Furkiozknn/Furkiozknn (canli GitHub durumu, kosu tarihinde)
+# GitHub cagrilari hesabin kendi jetonuyla (GH_TOKEN, hicbir yere yazilmadi); jetonsuz da calisir, 60 istek/saat siniriyla
+# her komut bash -c 'set -o pipefail; ...' ile bos bir klasorde kosuldu; hicbir satir elle yazilmadi
+
+$ repo-vet --version
+repo-vet 0.2.0
+[cikis kodu 0] (0.60 s)
+
+$ repo-vet Furkiozknn/prompt-template-manager Furkiozknn/Furkiozknn --skip web; echo "exit $?"
+Furkiozknn/prompt-template-manager  1 finding, 0 of them errors
+
+Release chain
+  ! `pyproject.toml` declares version 0.1.0, but the repository has never been tagged.
+      pyproject.toml -> 0.1.0, tags -> none
+
+Not checked: web (skipped on request)
+
+Furkiozknn/Furkiozknn  clean (5 checks)
+  - web: skipped (skipped on request)
+exit 0
+[cikis kodu 0] (4.91 s)
+
+$ repo-vet Furkiozknn/no-such-repo-zzz; echo "exit $?"
+Furkiozknn/no-such-repo-zzz  not checked
+  nothing was looked at: no such repository, or not visible with this token; check the spelling, a private repository needs --token or GITHUB_TOKEN
+exit 3
+[cikis kodu 0] (1.02 s)
+
+$ repo-vet https://github.com/Furkiozknn/repo-vet; echo "exit $?"
+not an OWNER/NAME slug: https://github.com/Furkiozknn/repo-vet
+hint: repo-vet Furkiozknn/repo-vet
+exit 2
+[cikis kodu 0] (0.64 s)
