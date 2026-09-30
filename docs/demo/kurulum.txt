@@ -1,0 +1,4 @@
+# uvx --from git+https://github.com/Furkiozknn/repo-vet repo-vet --version
+# tarih: 2026-09-30T01:08:01+03:00
+cold (empty uv cache): 9.90 s, exit 0, output 'repo-vet 0.2.0'
+warm (same cache): 2.56 s, exit 0, output 'repo-vet 0.2.0'

@@ -2,10 +2,28 @@
 
 # repo-vet
 
-<p align="center"><img src="docs/reel/reel.gif" alt="repo-vet - 15-second motion reel" width="720"></p>
-<p align="center"><sub><a href="docs/reel/reel.mp4">MP4 version with sound</a></sub></p>
-
 **Your README is a promise. This checks whether you can still keep it.**
+
+`repo-vet` reads a GitHub repository over the API, without cloning it, and checks what it claims about itself - install commands, links, status badges, releases, the published site - against what is actually there.
+
+```bash
+uvx --from git+https://github.com/Furkiozknn/repo-vet repo-vet Furkiozknn/repo-vet
+```
+
+Needs [`uv`](https://docs.astral.sh/uv/) and nothing else: no token for a public repository, no clone, no dependencies. Measured on 30 September 2026 with an empty uv cache: 10.0 s and 9.9 s (two runs) to fetch, build and print the version, then about 4 s for a full run without the outbound-link pass ([`docs/demo/kurulum.txt`](docs/demo/kurulum.txt), [`docs/DENETIM.md`](docs/DENETIM.md)).
+
+<p align="center"><img src="docs/demo/demo.gif" alt="repo-vet run on two repositories, on a repository that does not exist, and on a pasted URL; each shown with its exit code" width="720"></p>
+
+<sub>Real commands, real output, nothing typed by hand: [`docs/demo/komutlar.txt`](docs/demo/komutlar.txt) is the record (command, output, exit code, date), and `python scripts/demo-uret.py` regenerates the animation from it. [MP4](docs/demo/demo.mp4).</sub>
+
+| Use it when | Do not use it when |
+|---|---|
+| you are about to tell someone to run your install command | you want your prose, spelling or tone judged - only checkable claims are checked |
+| a pull request should fail because it broke the README (it is a [GitHub Action](#use-it-in-ci) too) | you want a security audit - see [mcp-vet](https://github.com/Furkiozknn/mcp-vet) for MCP servers |
+| you renamed a workflow or moved a file and want to know what still points at the old name | the repository is on your disk and not on GitHub - it reads over the API and does not scan a folder |
+| you keep a list of repositories (`--from-file`) and want the one that rotted | you expect it to fix anything - it reports observations with their evidence and changes nothing |
+
+Exit code `0` means every check that ran passed, `1` means an error-level finding, `2` is bad usage (a wrong first command prints the right one), `3` means the repository could not be read - [the full table](#use-it).
 
 [![CI](https://github.com/Furkiozknn/repo-vet/actions/workflows/ci.yml/badge.svg)](https://github.com/Furkiozknn/repo-vet/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/Furkiozknn/repo-vet?label=release&color=c9a961)](https://github.com/Furkiozknn/repo-vet/releases/latest)
@@ -13,39 +31,11 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![No dependencies](https://img.shields.io/badge/dependencies-none-lightgrey)](pyproject.toml)
 
-![repo-vet checking fastapi, requests and godot-refcheck: one finding in fastapi, the other two clean](assets/demo.gif)
-
-<sub>One real run, three repositories that are not mine to fix. <code>tiangolo/fastapi</code>'s README links to <code>tutorial/</code>, which 404s on GitHub — reported as a warning, because on the documentation site it is a live route and that is the author's call. The other two answer every check.</sub>
-
 `pip install thing` promises the distribution exists. A workflow badge promises
 the workflow exists and has run. A relative link promises the file is in the
 tree. A tag promises a release. These promises rot quietly, because the only
-way to notice is to try them — and nobody tries their own README twice.
-
-`repo-vet` tries them, over the GitHub API, without cloning anything.
-
-```console
-$ repo-vet Furkiozknn/prompt-template-manager Furkiozknn/Furkiozknn
-Furkiozknn/prompt-template-manager  1 finding, 0 of them errors
-
-Release chain
-  ! `pyproject.toml` declares version 0.1.0, but the repository has never been tagged.
-      pyproject.toml -> 0.1.0, tags -> none
-
-Furkiozknn/Furkiozknn  clean (6 checks)
-```
-
-That is real output, not a mock-up (re-run on 25 September 2026).
-
-**Try it on your own repository** — nothing to install but `uv`, and no
-token needed for a public repository:
-
-```bash
-uvx --from git+https://github.com/Furkiozknn/repo-vet repo-vet OWNER/NAME
-```
-
-Exit code `0` means every check that ran passed, `1` means an error-level
-finding, `3` means the repository could not be read — [the full table](#use-it).
+way to notice is to try them - and nobody tries their own README twice.
+`repo-vet` tries them.
 
 ## Status
 
@@ -54,7 +44,7 @@ finding, `3` means the repository could not be read — [the full table](#use-it
 | Version | 0.2.0 on `main`; latest tag [`v0.1.0`](https://github.com/Furkiozknn/repo-vet/releases/tag/v0.1.0) |
 | Python | 3.9 – 3.14 |
 | Runtime dependencies | none |
-| Tests | 157, offline |
+| Tests | 173, offline |
 | Checked against | 29 public repositories ([`corpus.txt`](corpus.txt)) |
 | Licence | MIT |
 
@@ -235,12 +225,17 @@ cd repo-vet
 PYTHONPATH=. python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-157 tests, standard library only, never touching the network: the GitHub API,
+173 tests, standard library only, never touching the network: the GitHub API,
 PyPI and npm are all behind one small client that the tests replace with a
 dictionary. (The redirect tests start two servers on `127.0.0.1`, and the
 Action tests run its shell step under `bash`; neither leaves the machine.)
 A linter you cannot run on a train is a linter you stop running.
 `python3 -m pytest tests -q` runs the same suite.
+
+`python scripts/demo-uret.py` re-records the animation above from real runs
+(it needs the installed `repo-vet`, `bash`, and for the video `node` with
+playwright and `ffmpeg`). The terminal font is JetBrains Mono, SIL OFL 1.1
+([`assets/yazi/`](assets/yazi/OFL-jetbrains-mono.txt)).
 
 Contributions: see [CONTRIBUTING.md](CONTRIBUTING.md). Security reports:
 [SECURITY.md](SECURITY.md).

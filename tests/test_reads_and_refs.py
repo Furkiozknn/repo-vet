@@ -329,7 +329,10 @@ class ActionStep(unittest.TestCase):
                     '    echo \'[{"finding_count": 2}]\' > "$2"; fi\n'
                     '  shift; done\n'
                     'echo "### summary"\n'
-                    'exit %d\n' % (sys.executable, kod))
+                    # Forward slashes and quotes: bash eats the backslashes of a
+                    # Windows interpreter path (C:\Users\...), which made this
+                    # test fail on Windows only.
+                    'exit %d\n' % ('"%s"' % sys.executable.replace("\\", "/"), kod))
         os.chmod(stub, 0o755)
         ortam = {"PATH": os.environ.get("PATH", ""), "RUNNER_TEMP": d,
                  "GITHUB_OUTPUT": os.path.join(d, "out"),

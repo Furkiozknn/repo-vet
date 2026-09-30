@@ -25,7 +25,11 @@ def as_text(rapor, renkli=False):
     satir = ["%s  %s" % (kalin(rapor.repo), _ozet(rapor))]
     if not rapor.findings:
         for ad, sebep in rapor.skipped:
-            satir.append("  - %s: skipped (%s)" % (ad, sebep))
+            if ad == "*" and rapor.unreadable:
+                # The whole repository, not one check: say so plainly.
+                satir.append("  nothing was looked at: %s" % sebep)
+            else:
+                satir.append("  - %s: skipped (%s)" % (ad, sebep))
         return "\n".join(satir)
     for ad, bulgular in sorted(_grupla(rapor.findings).items()):
         satir.append("")

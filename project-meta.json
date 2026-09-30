@@ -46,14 +46,16 @@
     "hero": "assets/banner.svg",
     "screenshots": [],
     "gifs": [
-      "assets/demo.gif"
+      "docs/demo/demo.gif"
     ],
-    "videos": []
+    "videos": [
+      "docs/demo/demo.mp4"
+    ]
   },
   "tests": {
-    "count": 157,
-    "source": "CI log: `Ran 157 tests in 1.691s`",
-    "measured": "2026-09-28"
+    "count": 173,
+    "source": "unittest: `Ran 173 tests` (local run, 2026-09-30)",
+    "measured": "2026-09-30"
   },
   "ci": {
     "workflows": [

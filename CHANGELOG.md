@@ -7,6 +7,42 @@ Every number here is measured. An unmeasured claim does not go in this file.
 
 ---
 
+## [Unreleased]
+
+First-run experience; no behaviour, exit code or output contract changed.
+
+### Changed
+
+- A slug that is not `OWNER/NAME` still exits `2`, and now prints the command
+  that would have worked: a pasted `https://github.com/...` or clone URL
+  becomes `repo-vet OWNER/NAME`, a trailing slash is dropped, a folder (`.`,
+  `../x`) is told that repo-vet reads over the API and does not scan folders.
+- `repo-vet` with no arguments prints an example and points at `--help`.
+- `--help` carries examples, the exit-code table and the "no clone, no local
+  folder" note; `--timeout` is described.
+- "no such repository" now says a private repository needs `--token`; "GitHub
+  could not be read" names the likely causes (no network, a proxy, an outage);
+  an unreadable repository prints `nothing was looked at: ...` instead of
+  `- *: skipped (...)`.
+- README first screen: definition, one install command, a recorded terminal
+  demo, when to use it and when not. The 15-second reel and the older
+  `assets/demo.gif` are gone: nothing in the repository could regenerate them.
+
+### Added
+
+- `scripts/demo-uret.py` and `scripts/demo-kayit.js` record the demo from real
+  runs into `docs/demo/` (`komutlar.txt` is the record).
+- 16 tests for the above (`tests/test_first_run.py`), including one that parses
+  every command the README shows.
+
+### Fixed
+
+- `ActionStep.test_exit_code_passes_through_and_findings_are_written` failed on
+  Windows only: bash ate the backslashes of the interpreter path in the stub.
+  The suite is now 173 tests, all passing there as well as on Linux.
+
+---
+
 ## [0.2.0] — 2026-09-25
 
 Minor version, because two behaviours change on purpose: an unreadable
