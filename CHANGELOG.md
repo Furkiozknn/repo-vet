@@ -9,7 +9,15 @@ Every number here is measured. An unmeasured claim does not go in this file.
 
 ## [Unreleased]
 
-First-run experience; no behaviour, exit code or output contract changed.
+First-run experience (no exit code or output contract changed), and the install
+check now covers Rust READMEs.
+
+### Added
+
+- The `install` check reads `cargo install NAME` lines in fenced code blocks and
+  asks crates.io whether the crate exists, alongside PyPI and npm. A 404 is a
+  finding; a timeout or registry error stays unknown. Git/path installs and
+  custom registries are skipped. Contributed by @hy3560 in #4 (closes #2).
 
 ### Changed
 
