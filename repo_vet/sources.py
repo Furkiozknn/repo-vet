@@ -24,8 +24,9 @@ from concurrent.futures import ThreadPoolExecutor
 GITHUB_API = "https://api.github.com"
 PYPI = "https://pypi.org/pypi/%s/json"
 NPM = "https://registry.npmjs.org/%s"
+CARGO = "https://crates.io/api/v1/crates/%s"
 
-KULLANICI = "repo-vet"
+KULLANICI = "repo-vet (+https://github.com/Furkiozknn/repo-vet)"
 
 
 # A GitHub API call that failed this way is asked once more. Not a rate limit
@@ -255,3 +256,20 @@ class Client(object):
         if veri is None:
             return set() if bilinen else None
         return set(veri.get("versions") or {})
+
+    def cargo_versions(self, name):
+        """Published crates.io versions, empty when absent, None when unknown."""
+        veri, bilinen = self.json(CARGO % urllib.parse.quote(name, safe=""))
+        if veri is None:
+            return set() if bilinen else None
+        crate = veri.get("crate")
+        if not isinstance(crate, dict):
+            return None
+        versions = veri.get("versions")
+        if isinstance(versions, list):
+            found = {v.get("num") for v in versions
+                     if isinstance(v, dict) and isinstance(v.get("num"), str)}
+            if found:
+                return found
+        version = crate.get("newest_version") or crate.get("max_version")
+        return {version} if version else None
