@@ -54,7 +54,7 @@ runs:
     # `update-environment: false`: a composite action shares the caller's
     # job, and setup-python would otherwise put its 3.12 first on PATH for
     # every step after this one -- the job's own Python silently replaced.
-    - uses: actions/setup-python@v6
+    - uses: actions/setup-python@v7
       id: python
       with:
         python-version: "3.12"
