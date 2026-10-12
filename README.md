@@ -44,7 +44,7 @@ way to notice is to try them - and nobody tries their own README twice.
 | Version | 0.2.0 on `main`; latest tag [`v0.1.0`](https://github.com/Furkiozknn/repo-vet/releases/tag/v0.1.0) |
 | Python | 3.9 – 3.14 |
 | Runtime dependencies | none |
-| Tests | 191, offline |
+| Tests | 194, offline |
 | Checked against | 29 public repositories ([`corpus.txt`](corpus.txt)) |
 | Licence | MIT |
 
