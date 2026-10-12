@@ -3,8 +3,8 @@
 
 Two reasons it is one class and not scattered `urlopen` calls: the tests
 replace it with a dictionary, and a user can see in one place exactly which
-hosts this tool talks to (api.github.com, pypi.org, registry.npmjs.org, and
-whatever URLs your own README links to).
+hosts this tool talks to (api.github.com, pypi.org, registry.npmjs.org,
+crates.io, and whatever URLs your own README links to).
 
 The distinction this module is built around is **absent** versus **could not
 look**. A 404 from PyPI means the distribution is not published. A 403, a
