@@ -17,7 +17,18 @@ check now covers Rust READMEs.
 - The `install` check reads `cargo install NAME` lines in fenced code blocks and
   asks crates.io whether the crate exists, alongside PyPI and npm. A 404 is a
   finding; a timeout or registry error stays unknown. Git/path installs and
-  custom registries are skipped. Contributed by @hy3560 in #4 (closes #2).
+  custom registries are skipped. Contributed by @hy3560 in #4 (closes #2),
+  with 15 tests: `tests/test_sources.py` and new cases in
+  `tests/test_checks.py` and `tests/test_readme.py`.
+- `scripts/demo-uret.py` and `scripts/demo-kayit.js` record the demo from real
+  runs into `docs/demo/` (`komutlar.txt` is the record).
+- 16 tests for the first-run changes below (`tests/test_first_run.py`),
+  including one that parses every command the README shows.
+- 3 tests that hold `SECURITY.md`'s token promise
+  (`tests/test_sources.py`, `TokenStaysOnGitHub`): PyPI, npm, crates.io, README
+  links and the homepage get no `Authorization` header, GitHub API calls do.
+  Putting `auth=True` on any one of those registry or link requests makes one
+  of the three fail.
 
 ### Changed
 
@@ -36,18 +47,22 @@ check now covers Rust READMEs.
   demo, when to use it and when not. The 15-second reel and the older
   `assets/demo.gif` are gone: nothing in the repository could regenerate them.
 
-### Added
-
-- `scripts/demo-uret.py` and `scripts/demo-kayit.js` record the demo from real
-  runs into `docs/demo/` (`komutlar.txt` is the record).
-- 16 tests for the above (`tests/test_first_run.py`), including one that parses
-  every command the README shows.
-
 ### Fixed
 
 - `ActionStep.test_exit_code_passes_through_and_findings_are_written` failed on
   Windows only: bash ate the backslashes of the interpreter path in the stub.
-  The suite is now 173 tests, all passing there as well as on Linux.
+  The first-run work brought the suite to 173 tests, all passing on Windows as
+  well as Linux; with the crates.io tests (#4) it is 188 (CI run 36662822057:
+  `Ran 188 tests`), and 191 with the token tests above (local run, Linux,
+  Python 3.13).
+- The source distribution now ships `action.yml`. The `ActionStep` tests read
+  it, so the suite run from an unpacked sdist ended in `FAILED (errors=7)`
+  (`FileNotFoundError`, all seven `ActionStep` tests); from the new sdist it
+  prints `Ran 191 tests` and `OK`. The wheel's file list is unchanged.
+- `--help` said exit `0` means "clean"; under the default `--fail-on error` a
+  run with only warnings exits `0` too, and the help now says so. `--timeout`
+  applies to every request (GitHub, the package registries, outbound links),
+  not only GitHub's, and is described that way.
 
 ---
 

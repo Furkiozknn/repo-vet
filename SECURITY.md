@@ -28,17 +28,19 @@ It is easier to judge a report against a surface that is written down.
 - **The token** (`--token`, `GITHUB_TOKEN` or `GH_TOKEN`) is sent only with
   requests to `api.github.com`. If GitHub answers with a redirect to another
   origin (host, port or scheme), the redirected request goes without it. It
-  is never sent to PyPI, npm, or any URL taken from a README. It is never
-  written to the report, the JSON file or the step summary.
+  is never sent to PyPI, npm, crates.io, or any URL taken from a README (tests
+  hold both rules). It is never written to the report, the JSON file or the
+  step summary.
 - **Slugs and refs are validated** before any request: an `OWNER/NAME` or a
   `--ref` containing `..`, `?`, `#`, `%`, spaces or other characters GitHub
   does not allow is refused with exit `2`, so neither can redirect a request
   that carries the token to another API path.
-- **Hosts contacted:** `api.github.com`, `pypi.org`, `registry.npmjs.org`, the
-  repository's homepage and its `github.io` address, and — only for the `web`
-  check — the outbound links in the README, up to `--web-limit` of them
-  (40 by default). A README therefore decides which URLs repo-vet sends a GET
-  to. Skip `web` and `pages` if that matters where you run it.
+- **Hosts contacted:** `api.github.com`, `pypi.org`, `registry.npmjs.org`,
+  `crates.io`, the repository's homepage (or, when none is set, its
+  `github.io` address), and — only for the `web` check — the outbound links
+  in the README, up to `--web-limit` of them (40 by default). A README
+  therefore decides which URLs repo-vet sends a GET to. Skip `web` and
+  `pages` if that matters where you run it.
 - **Files written:** only the path given to `--json-out`.
 - **The GitHub Action** passes its inputs to the script as environment
   variables, not by `${{ }}` substitution, so an input value is never parsed
