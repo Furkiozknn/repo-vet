@@ -47,4 +47,4 @@ build-backend = "hatchling.build"
 packages = ["repo_vet"]
 
 [tool.hatch.build.targets.sdist]
-include = ["repo_vet", "tests", "README.md", "LICENSE", "CHANGELOG.md"]
+include = ["repo_vet", "tests", "action.yml", "README.md", "LICENSE", "CHANGELOG.md"]
