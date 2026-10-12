@@ -8,7 +8,7 @@ keep it trustworthy.
 ```bash
 git clone https://github.com/Furkiozknn/repo-vet
 cd repo-vet
-PYTHONPATH=. python -m unittest discover -s tests -p "test_*.py"   # what CI runs
+PYTHONPATH=. python -Werror::ResourceWarning -m unittest discover -s tests -p "test_*.py"   # what CI runs
 python -m repo_vet psf/requests --skip web                         # a real run
 ```
 

@@ -83,6 +83,35 @@ class FirstRunMessages(unittest.TestCase):
         self.assertIn("seconds to wait", out)          # --timeout is described
 
 
+def _yardim(dest):
+    """The help string of one option, as written, before argparse wraps it.
+
+    The rendered --help breaks `--fail-on` at its hyphen on a narrow terminal,
+    so a phrase check on that output depends on COLUMNS."""
+    for eylem in cli._parser()._actions:
+        if eylem.dest == dest:
+            return eylem.help
+    raise AssertionError("no option with dest " + dest)
+
+
+class OptionHelp(unittest.TestCase):
+    """The option help must not contradict the exit-code table under it."""
+
+    def test_fail_on_help_does_not_call_a_warning_only_run_clean(self):
+        # Under the default `--fail-on error` a run with only warnings exits 0.
+        # The help used to say "0 clean", which that run is not.
+        yardim = _yardim("fail_on")
+        self.assertNotIn("0 clean", yardim)
+        self.assertIn("0 nothing that fails under --fail-on", yardim)
+
+    def test_timeout_help_names_every_kind_of_request(self):
+        # Client(timeout=...) is used for the registries and outbound links
+        # too, not only for GitHub.
+        yardim = _yardim("timeout")
+        for ne in ("GitHub", "package registries", "outbound links"):
+            self.assertIn(ne, yardim)
+
+
 class _Istemci(object):
     """Just enough of Client for `vet` to stop at the first question."""
 

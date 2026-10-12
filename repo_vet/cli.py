@@ -65,10 +65,12 @@ def _parser():
                    help="how many outbound links to try (default 40)")
     p.add_argument("--fail-on", choices=("error", "any", "none"), default="error",
                    help="what makes the exit code non-zero (default: error). "
-                        "Exit codes: 0 clean, 1 findings, 2 bad usage, "
+                        "Exit codes: 0 nothing that fails under --fail-on, "
+                        "1 findings as --fail-on defines them, 2 bad usage, "
                         "3 a repository could not be read at all")
     p.add_argument("--timeout", type=int, default=20,
-                   help="seconds to wait for each GitHub request (default 20)")
+                   help="seconds to wait for each request - GitHub, the package "
+                        "registries and outbound links (default 20)")
     p.add_argument("--version", action="version", version="repo-vet " + __version__)
     return p
 
