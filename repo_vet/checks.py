@@ -466,12 +466,114 @@ def check_license(ctx):
     return out
 
 
+# --------------------------------------------------------------------------
+# command-line options
+# --------------------------------------------------------------------------
+
+# A long option written out in source, as argparse, click, commander and
+# yargs all spell it: "--json-out", '--fail-on', "--shout/--no-shout",
+# commander's "-d, --debug" and "--port <n>".
+SECENEK_TANIMI = re.compile(r"""(?:["'/]|,\s*)(--[A-Za-z0-9][A-Za-z0-9_-]*)(?=["'/=\s,<\[])""")
+# The entry file builds the parser itself.
+AYRISTIRICI = re.compile(
+    r"ArgumentParser\(|\.add_argument\(|@click\.(?:command|group|option)\b"
+    r"|new Command\(|\.option\(\s*['\"]-|require\(['\"]yargs|from ['\"]yargs")
+# Options may also live in modules the entry file pulls in.
+BASKA_YERDE = re.compile(r"add_subparsers\(|parents\s*=|\.add_command\(|\.command\(\s*['\"]")
+
+
+def cli_entry_points(ctx):
+    """(command, path) for each console command a manifest declares, with the
+    file that defines it located in the tree."""
+    out = []
+    metin, _ = ctx.client.file_text(ctx.slug, "pyproject.toml", ctx.branch)
+    if metin:
+        tablo = _toml_table(metin, "project.scripts") + _toml_table(metin, "tool.poetry.scripts")
+        betikler = re.findall(r'^\s*"?([A-Za-z0-9_.-]+)"?\s*=\s*"([\w.]+):\w+', tablo, re.M)
+        # The dotted-key spelling inside [project]: `scripts.pipx = "pipx.__main__:cli"`
+        # (pypa/pipx writes it this way).
+        betikler += re.findall(r'^\s*scripts\."?([A-Za-z0-9_-]+)"?\s*=\s*"([\w.]+):\w+',
+                               _toml_table(metin, "project"), re.M)
+        for komut, hedef in betikler:
+            modul = hedef.replace(".", "/")
+            for aday in (modul + ".py", modul + "/__init__.py",
+                         "src/" + modul + ".py", "src/" + modul + "/__init__.py"):
+                if ctx.tree is not None and aday in ctx.tree:
+                    out.append((komut, aday))
+                    break
+    metin, _ = ctx.client.file_text(ctx.slug, "package.json", ctx.branch)
+    if metin:
+        try:
+            veri = json.loads(metin)
+        except ValueError:
+            veri = None
+        if isinstance(veri, dict):
+            bin_ = veri.get("bin")
+            if isinstance(bin_, str):
+                bin_ = {str(veri.get("name", "")).split("/")[-1]: bin_}
+            if isinstance(bin_, dict):
+                for komut, yol in sorted(bin_.items()):
+                    yol = str(yol).lstrip("./")
+                    if komut and ctx.tree is not None and yol in ctx.tree:
+                        out.append((komut, yol))
+    return out
+
+
+def check_flags(ctx):
+    """Do the options the README passes to the project's own command exist?
+
+    `repo-vet o/r --json-out r.json` in a code block promises that
+    `--json-out` is an option. Rename it in the parser and the README's
+    example ends in "unrecognized arguments". The command and the file that
+    defines it come from the manifest (`[project.scripts]`, `package.json`
+    `bin`), and the options are read from that file as written.
+
+    Judged only when that file builds the parser itself and spells options out
+    as strings. Options derived from names (typer, clap's derive) or defined
+    in another module cannot be seen, so that repository is not checked rather
+    than accused. argparse accepts an unambiguous prefix (`--json-o`), so a
+    prefix of a defined option counts too. A missing option is a warning when
+    the file also wires in subcommands or parent parsers, which may define it.
+    """
+    gorulmedi = []
+    bakildi = 0
+    out = []
+    for komut, yol in cli_entry_points(ctx):
+        istenen = md.cli_flags(ctx.text, komut) - {"--help"}
+        if not istenen:
+            continue
+        kaynak, bilinen = ctx.client.file_text(ctx.slug, yol, ctx.branch)
+        if not bilinen:
+            raise NotChecked("%s could not be read" % yol)
+        tanimli = set(SECENEK_TANIMI.findall(kaynak or ""))
+        if not kaynak or not AYRISTIRICI.search(kaynak) or not tanimli:
+            gorulmedi.append(yol)
+            continue
+        bakildi += 1
+        kisaltma = "ArgumentParser(" in kaynak and "allow_abbrev=False" not in kaynak
+        seviye = UYARI if BASKA_YERDE.search(kaynak) else HATA
+        for secenek in sorted(istenen):
+            if secenek in tanimli:
+                continue
+            if kisaltma and any(t.startswith(secenek) for t in tanimli):
+                continue
+            out.append(Finding(
+                "flags",
+                "README runs `%s %s`, but %s defines no such option." % (komut, secenek, yol),
+                "%s@%s: %d options, none is %s" % (yol, ctx.shown_ref, len(tanimli), secenek),
+                seviye))
+    if gorulmedi and not bakildi:
+        raise NotChecked("the options are not spelled out in %s" % ", ".join(gorulmedi))
+    return out
+
+
 CHECKS = [
     ("install", check_install),
     ("links", check_links),
     ("badges", check_badges),
     ("release", check_release),
     ("license", check_license),
+    ("flags", check_flags),
     ("web", check_web),
     ("pages", check_pages),
 ]

@@ -9,6 +9,7 @@ BASLIK = {
     "badges": "Status badge",
     "release": "Release chain",
     "license": "Licence",
+    "flags": "Command-line option",
     "web": "Outbound link",
     "pages": "Published site",
 }

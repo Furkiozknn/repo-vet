@@ -57,6 +57,7 @@ way to notice is to try them - and nobody tries their own README twice.
 | `badges` | a status badge points at a workflow that exists and has run | a renamed workflow makes the badge render *"no status"*, not red |
 | `release` | the release chain finished | a finished version is declared but nothing was ever tagged; the tag carrying the declared version has no Release while other tags do |
 | `license` | the manifest, the README badge and the LICENSE file name the same licence | `pyproject.toml` says MIT over an Apache-2.0 LICENSE; a licence badge for a licence the repository does not grant; a declared licence and no licence file at all |
+| `flags` | the options a code block passes to the project's own command are options it defines | `--output` renamed to `--json-out` in the parser, and the README's example now ends in *unrecognized arguments* |
 | `web` | outbound links still answer | 404 and 410 only — a 403 means a host declined to talk to a script, which says nothing |
 | `pages` | the advertised site is alive, and a live site is advertised | a dead homepage, or a live GitHub Pages site nobody is told about |
 
@@ -119,6 +120,18 @@ reports nothing across the twenty-nine repositories, which are healthy.
 Licences are compared by family, so "Apache 2.0", "Apache-2.0" and "Apache
 Software License" never disagree. A licence GitHub cannot identify is not
 judged.
+
+The `flags` check reads the command and its file from the manifest
+(`[project.scripts]`, or `package.json`'s `bin`). It then compares the long
+options the README's code blocks pass to that command with the options that
+file spells out. It judges only a file that builds its parser itself (argparse,
+click, commander, yargs). Options derived from names (typer, clap's derive) or
+defined in another module are reported as *not checked*. argparse's
+unambiguous prefixes count as defined. On the twenty-nine repositories above,
+plus twenty-one command-line projects (black, twine, mkdocs, datasette, llm,
+eslint, yt-dlp, aider and others), it judged 28 options in 4 repositories and
+reported none. It listed 4 repositories (yt-dlp, aider, np, http-server) as
+not checked, because their options live outside the entry file.
 
 ## Install
 

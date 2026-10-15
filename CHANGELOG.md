@@ -9,7 +9,7 @@ Every number here is measured. An unmeasured claim does not go in this file.
 
 ## [Unreleased]
 
-### Added: the `license` check
+### Added: the `license` and `flags` checks
 
 - **`license`: the manifest, the README badge and the LICENSE file must name
   the same licence.** `pyproject.toml` (`license` and `License ::`
@@ -23,10 +23,22 @@ Every number here is measured. An unmeasured claim does not go in this file.
   badges are read together. The first corpus run called `clap-rs/clap`'s MIT
   badge wrong for exactly that reason; the run after the fix reports nothing
   across the 29 repositories. `tests/test_license.py`, 21 tests.
+- **`flags`: options the README passes to the project's own command must
+  exist.** The command and the file that defines it come from
+  `[project.scripts]` (also the dotted `scripts.x =` form) or `package.json`'s
+  `bin`. Long options after that command in a code block are compared with the
+  options that file spells out. `pip install tool --upgrade` is pip's option,
+  not the tool's. Only a file that builds its own parser (argparse, click,
+  commander, yargs) is judged, and an argparse prefix counts as defined.
+  Subcommands or parent parsers in the same file make a missing option a
+  warning. Options the file does not spell out leave the check *not checked*.
+  On the 29-repository corpus plus 21 command-line projects: 28 options judged
+  in 4 repositories, 0 findings, 4 repositories not checked.
+  `tests/test_flags.py`, 16 tests.
 - The client keeps a file it has read: the release and licence checks share
   `pyproject.toml` and `package.json`. A full run (`--skip web`) now costs 6
   to 9 GitHub requests (psf/requests 6, BurntSushi/ripgrep 6,
-  Furkiozknn/repo-vet 8, expressjs/express 9; measured 2026-10-15).
+  Furkiozknn/repo-vet 8, expressjs/express 9; measured 2026-10-15; with `flags`, repo-vet itself is 9).
 First-run experience (no exit code or output contract changed), and the install
 check now covers Rust READMEs.
 

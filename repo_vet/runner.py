@@ -7,7 +7,7 @@ import re
 from .checks import CHECKS, Context, NotChecked
 from .model import ISTEKLE, Report
 
-README_GEREKTIREN = ("install", "links", "badges", "web")
+README_GEREKTIREN = ("install", "links", "badges", "flags", "web")
 
 
 def vet(slug, client, only=None, skip=None, web_limit=40, ref=None):
@@ -82,7 +82,7 @@ def vet(slug, client, only=None, skip=None, web_limit=40, ref=None):
         if metin is None and ad in README_GEREKTIREN:
             rapor.skipped.append((ad, "needs a README"))
             continue
-        if ad in ("links", "badges"):
+        if ad in ("links", "badges", "flags"):
             if agac is None:
                 rapor.skipped.append((ad, "the file tree could not be read"))
                 continue

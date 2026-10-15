@@ -232,6 +232,46 @@ def external_links(text):
     return out
 
 
+# Words that run another program by name: `uvx tool --flag`, `npx tool`.
+CALISTIRICI = {"uvx", "npx", "bunx", "pipx", "uv", "pnpm", "yarn", "sudo", "run", "dlx",
+               "exec", "--from", "--with", "-p", "--python", "--package"}
+# Words that mean the command name is an argument, not the program being run.
+KURULUM = {"install", "add", "i", "uninstall", "remove", "rm", "inject"}
+UZUN_SECENEK = re.compile(r"^--[A-Za-z0-9][A-Za-z0-9_-]*$")
+
+
+def cli_flags(text, command):
+    """Long options a README's code blocks pass to `command`.
+
+    `repo-vet o/r --skip web` gives `--skip`. The command has to be the program
+    being run: the first word of the line, or the program a runner starts
+    (`uvx --from git+... repo-vet --help`). `pip install repo-vet --upgrade`
+    names the command as a package, and `--upgrade` is pip's.
+    """
+    out = set()
+    for blok in KOD_BLOGU.findall(text or ""):
+        for satir in blok.splitlines():
+            satir = satir.strip()
+            if satir.startswith(("$ ", "> ")):
+                satir = satir[2:]
+            # One command per segment: `a --x | b --y`, `a && b`, `# comment`.
+            for parca in re.split(r"\s(?:\||&&|\|\||;)\s|\s#\s", " " + satir + " "):
+                kelimeler = parca.split()
+                if command not in kelimeler:
+                    continue
+                i = kelimeler.index(command)
+                once = kelimeler[:i]
+                if any(k in KURULUM for k in once):
+                    continue
+                if once and once[0] not in CALISTIRICI and not re.match(r"^\w+=", once[0]):
+                    continue
+                for k in kelimeler[i + 1:]:
+                    k = k.split("=", 1)[0].strip("`\"'),;")
+                    if UZUN_SECENEK.match(k):
+                        out.add(k)
+    return out
+
+
 ROZET_STATIK = re.compile(r"img\.shields\.io/badge/([^\s\"')]+)")
 
 
