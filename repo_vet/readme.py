@@ -232,6 +232,35 @@ def external_links(text):
     return out
 
 
+ROZET_STATIK = re.compile(r"img\.shields\.io/badge/([^\s\"')]+)")
+
+
+def licence_badges(text):
+    """What static licence badges say: `badge/license-MIT-green` -> "MIT".
+
+    Only shields.io's static form is read. `img.shields.io/github/license/...`
+    asks GitHub at render time and cannot disagree with the repository.
+    """
+    out = set()
+    for yol in ROZET_STATIK.findall(text or ""):
+        yol = yol.split("?")[0]
+        if yol.endswith(".svg"):
+            yol = yol[:-4]
+        # shields: `-` separates label, message and colour; `--` is a dash,
+        # `__` an underscore and `_` a space.
+        parcalar = [p.replace("\0", "-") for p in yol.replace("--", "\0").split("-")]
+        if len(parcalar) < 3:
+            continue
+        etiket = urllib.parse.unquote(parcalar[0]).replace("_", " ").strip().lower()
+        if etiket not in ("license", "licence", "licensed"):
+            continue
+        mesaj = urllib.parse.unquote("-".join(parcalar[1:-1]))
+        mesaj = mesaj.replace("__", "\0").replace("_", " ").replace("\0", "_").strip()
+        if mesaj:
+            out.add(mesaj)
+    return out
+
+
 def workflow_badges(text):
     """(owner, repo, workflow-file) for every workflow-status badge."""
     out = set()

@@ -8,6 +8,7 @@ BASLIK = {
     "links": "Link into the repository",
     "badges": "Status badge",
     "release": "Release chain",
+    "license": "Licence",
     "web": "Outbound link",
     "pages": "Published site",
 }

@@ -12,6 +12,7 @@ proved the general version wrong. Those repositories are named in the
 comments, and in the tests.
 """
 
+import json
 import re
 
 from .model import Finding, HATA, UYARI
@@ -298,11 +299,179 @@ def check_pages(ctx):
     return out
 
 
+# --------------------------------------------------------------------------
+# licence
+# --------------------------------------------------------------------------
+
+# Licences are compared by family, not by exact SPDX id. "Apache 2.0" in a
+# badge, "Apache-2.0" in a manifest and "Apache Software License" in a
+# classifier are the same promise; telling them apart would be pedantry, and
+# a pedantic check is one people switch off. Families are what can actually
+# contradict each other: a manifest saying MIT over an Apache-2.0 LICENSE.
+# Longer prefixes first, so "lgpl" is not read as "gpl".
+LISANS_AILELERI = (
+    ("agpl", "agpl"), ("gnuaffero", "agpl"),
+    ("lgpl", "lgpl"), ("gnulesser", "lgpl"), ("gnulibrary", "lgpl"),
+    ("gpl", "gpl"), ("gnugeneralpublic", "gpl"), ("gnugpl", "gpl"),
+    ("apache", "apache"), ("mit", "mit"), ("0bsd", "bsd"), ("bsd", "bsd"),
+    ("mpl", "mpl"), ("mozilla", "mpl"), ("isc", "isc"),
+    ("unlicense", "unlicense"), ("theunlicense", "unlicense"),
+    ("cc0", "cc0"), ("epl", "epl"), ("eclipse", "epl"),
+    ("bsl", "bsl"), ("boost", "bsl"), ("zlib", "zlib"), ("wtfpl", "wtfpl"),
+)
+
+LISANS_DOSYASI = re.compile(r"^(?:un)?licen[cs]e|^copying", re.I)
+
+
+def licence_family(name):
+    """The family a licence name belongs to, or None when it is not known.
+
+    None is an answer that silences the check: an unknown name is not
+    evidence of a mismatch.
+    """
+    s = re.sub(r"[^a-z0-9]", "", (name or "").lower())
+    if not s or s.startswith(("licenseref", "noassertion", "other", "see")):
+        return None
+    for onek, aile in LISANS_AILELERI:
+        if s.startswith(onek):
+            return aile
+    return None
+
+
+def licence_families(expression):
+    """Families an SPDX expression allows: "MIT OR Apache-2.0" -> {mit, apache}.
+
+    None if any part is unknown, so a `LicenseRef-...` or a typo is not judged.
+    """
+    ifade = re.sub(r"\s+WITH\s+[^\s()]+", " ", expression or "", flags=re.I)
+    parcalar = [p for p in re.split(r"\s+(?:OR|AND)\s+|[()/,]", ifade, flags=re.I)
+                if p.strip()]
+    aileler = set()
+    for p in parcalar:
+        aile = licence_family(p)
+        if aile is None:
+            return None
+        aileler.add(aile)
+    return aileler or None
+
+
+def _toml_table(metin, ad):
+    """The text of one `[table]` in a TOML file, up to the next header."""
+    m = re.search(r"^\[%s\]\s*$(.*?)(?=^\[|\Z)" % re.escape(ad), metin, re.M | re.S)
+    return m.group(1) if m else ""
+
+
+def declared_licences(ctx):
+    """(where, what) for every licence a manifest declares.
+
+    A manifest that cannot be read is left out rather than guessed at.
+    """
+    out = []
+    metin, _ = ctx.client.file_text(ctx.slug, "pyproject.toml", ctx.branch)
+    if metin:
+        proje = _toml_table(metin, "project")
+        m = (re.search(r'^\s*license\s*=\s*"([^"]+)"', proje, re.M)
+             or re.search(r'^\s*license\s*=\s*\{[^}\n]*\btext\s*=\s*"([^"]+)"', proje, re.M))
+        if m:
+            out.append(("pyproject.toml", m.group(1)))
+        for sinif in re.findall(r'"License :: (?:OSI Approved :: )?([^"]+)"', proje):
+            out.append(("pyproject.toml classifier", sinif))
+    metin, _ = ctx.client.file_text(ctx.slug, "package.json", ctx.branch)
+    if metin:
+        try:
+            veri = json.loads(metin)
+        except ValueError:
+            veri = None
+        if isinstance(veri, dict) and isinstance(veri.get("license"), str):
+            out.append(("package.json", veri["license"]))
+    metin, _ = ctx.client.file_text(ctx.slug, "Cargo.toml", ctx.branch)
+    if metin:
+        m = re.search(r'^\s*license\s*=\s*"([^"]+)"', _toml_table(metin, "package"), re.M)
+        if m:
+            out.append(("Cargo.toml", m.group(1)))
+    return out
+
+
+def check_license(ctx):
+    """Do the licence claims agree with the licence file?
+
+    Three places promise a licence: the LICENSE file (which is what GitHub
+    detects and what actually grants the rights), the package manifest (which
+    is what PyPI, npm and crates.io show), and a README badge. When they name
+    different licence families, a user cannot tell which one applies.
+
+    Quiet by construction: a licence GitHub cannot identify (`NOASSERTION`,
+    two LICENSE files for a dual licence), an unknown name, or a dynamic
+    `shields.io/github/license/...` badge are never judged.
+    """
+    if "license" not in ctx.meta:
+        raise NotChecked("GitHub did not report the repository's licence")
+    lisans = ctx.meta.get("license") or {}
+    spdx = lisans.get("spdx_id") or "" if isinstance(lisans, dict) else ""
+    tespit = licence_family(spdx)
+    kok_dosyalar = [p for p in (ctx.tree or ()) if "/" not in p and LISANS_DOSYASI.match(p)]
+    dosya_yok = (not lisans and ctx.tree is not None and not ctx.tree_truncated
+                 and not kok_dosyalar)
+    # A dual licence ships one file per licence (clap-rs/clap: LICENSE-APACHE
+    # and LICENSE-MIT) and GitHub detects only one of them. Each file's name
+    # counts as a licence the repository grants.
+    izinli = set([tespit]) if tespit else set()
+    for ad in kok_dosyalar:
+        aile = licence_family(re.sub(r"^(?:un)?licen[cs]e|^copying", "", ad, flags=re.I))
+        if aile:
+            izinli.add(aile)
+    out = []
+    for kaynak, ifade in declared_licences(ctx):
+        aileler = licence_families(ifade)
+        if not aileler:
+            continue
+        if tespit and not (aileler & izinli):
+            out.append(Finding(
+                "license",
+                "`%s` declares the licence %s, but the licence file GitHub "
+                "detects is %s." % (kaynak, ifade, spdx),
+                "%s -> %s; GitHub license -> %s" % (kaynak, ifade, spdx)))
+        elif dosya_yok:
+            out.append(Finding(
+                "license",
+                "`%s` declares the licence %s, but the repository has no "
+                "licence file, so the licence text is not shipped with the "
+                "code." % (kaynak, ifade),
+                "%s -> %s; no LICENSE or COPYING at the root" % (kaynak, ifade),
+                UYARI))
+    # Badges are read together: two badges, one per licence, are how a dual
+    # licence is usually shown (clap-rs/clap again).
+    rozetler = sorted(md.licence_badges(ctx.text))
+    aileler = set()
+    for metin in rozetler:
+        a = licence_families(metin)
+        if a is None:
+            aileler = set()
+            break
+        aileler |= a
+    if aileler:
+        soylenen = " and ".join(rozetler)
+        if tespit and not (aileler & izinli):
+            out.append(Finding(
+                "license",
+                "README's licence badge says %s, but the licence file GitHub "
+                "detects is %s." % (soylenen, spdx),
+                "badge -> %s; GitHub license -> %s" % (soylenen, spdx)))
+        elif dosya_yok:
+            out.append(Finding(
+                "license",
+                "README's licence badge says %s, but the repository has no "
+                "licence file." % soylenen,
+                "badge -> %s; no LICENSE or COPYING at the root" % soylenen, UYARI))
+    return out
+
+
 CHECKS = [
     ("install", check_install),
     ("links", check_links),
     ("badges", check_badges),
     ("release", check_release),
+    ("license", check_license),
     ("web", check_web),
     ("pages", check_pages),
 ]
