@@ -44,7 +44,7 @@ way to notice is to try them - and nobody tries their own README twice.
 | Version | 0.2.0 on `main`; latest tag [`v0.1.0`](https://github.com/Furkiozknn/repo-vet/releases/tag/v0.1.0) |
 | Python | 3.9 – 3.14 |
 | Runtime dependencies | none |
-| Tests | 173, offline |
+| Tests | 209, offline |
 | Checked against | 29 public repositories ([`corpus.txt`](corpus.txt)) |
 | Licence | MIT |
 
@@ -236,9 +236,9 @@ cd repo-vet
 PYTHONPATH=. python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-173 tests, standard library only, never touching the network: the GitHub API,
-PyPI and npm are all behind one small client that the tests replace with a
-dictionary. (The redirect tests start two servers on `127.0.0.1`, and the
+209 tests, standard library only, never touching the network: the GitHub API,
+PyPI, npm and crates.io are all behind one small client that the tests replace
+with a dictionary. (The redirect tests start two servers on `127.0.0.1`, and the
 Action tests run its shell step under `bash`; neither leaves the machine.)
 A linter you cannot run on a train is a linter you stop running.
 `python3 -m pytest tests -q` runs the same suite.
