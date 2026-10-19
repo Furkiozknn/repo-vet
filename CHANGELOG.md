@@ -9,6 +9,24 @@ Every number here is measured. An unmeasured claim does not go in this file.
 
 ## [Unreleased]
 
+### Added: the `license` check
+
+- **`license`: the manifest, the README badge and the LICENSE file must name
+  the same licence.** `pyproject.toml` (`license` and `License ::`
+  classifiers), `package.json` and `Cargo.toml` are compared with the licence
+  GitHub detects, and so is a static shields.io licence badge. A different
+  licence *family* (MIT against Apache-2.0) is an error. A declared licence
+  with no LICENSE or COPYING file at the root is a warning. A licence GitHub
+  cannot identify (`NOASSERTION`), an unknown name, or a dynamic
+  `github/license` badge is never judged. One file per licence
+  (`LICENSE-MIT`, `LICENSE-APACHE`) counts as a dual licence, and several
+  badges are read together. The first corpus run called `clap-rs/clap`'s MIT
+  badge wrong for exactly that reason; the run after the fix reports nothing
+  across the 29 repositories. `tests/test_license.py`, 21 tests.
+- The client keeps a file it has read: the release and licence checks share
+  `pyproject.toml` and `package.json`. A full run (`--skip web`) now costs 6
+  to 9 GitHub requests (psf/requests 6, BurntSushi/ripgrep 6,
+  Furkiozknn/repo-vet 8, expressjs/express 9; measured 2026-10-15).
 First-run experience (no exit code or output contract changed), and the install
 check now covers Rust READMEs.
 
@@ -62,12 +80,13 @@ check now covers Rust READMEs.
   Windows only: bash ate the backslashes of the interpreter path in the stub.
   The first-run work brought the suite to 173 tests, all passing on Windows as
   well as Linux; with the crates.io tests (#4) it is 188 (CI run 36662822057:
-  `Ran 188 tests`). With the token tests and the help and sdist tests above it
-  is 194 (local run, Linux, Python 3.13: `Ran 194 tests`).
+  `Ran 188 tests`). The `license` check's tests bring `main` to 209; the token,
+  help and sdist tests above bring it to 215 (local run, Linux, Python 3.13:
+  `Ran 215 tests`).
 - The source distribution now ships `action.yml`. The `ActionStep` tests read
   it, so the suite run from an unpacked sdist ended in `FAILED (errors=7)`
   (`FileNotFoundError`, all seven `ActionStep` tests); from the new sdist it
-  prints `Ran 194 tests` and `OK`. The wheel's file list is unchanged.
+  ran `OK` (194 tests when measured, before the `license` tests landed). The wheel's file list is unchanged.
 - `--help` said exit `0` means "clean"; under the default `--fail-on error` a
   run with only warnings exits `0` too, and the help now says so. `--timeout`
   applies to every request (GitHub, the package registries, outbound links),

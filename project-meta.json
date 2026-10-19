@@ -53,9 +53,9 @@
     ]
   },
   "tests": {
-    "count": 194,
-    "source": "local run: `Ran 194 tests` (ci.yml command, branch claude/depo-denetimi-2026-10-12)",
-    "measured": "2026-10-12"
+    "count": 215,
+    "source": "unittest: `Ran 215 tests` (local run, 2026-10-19, with -Werror::ResourceWarning)",
+    "measured": "2026-10-19"
   },
   "ci": {
     "workflows": [
