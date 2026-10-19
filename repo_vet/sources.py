@@ -75,6 +75,7 @@ class Client(object):
         self._opener = opener or _varsayilan_acici()
         self._sleep = sleep or time.sleep
         self._cache = {}
+        self._dosyalar = {}             # contents URL -> (text, known)
         self.rate_limited = False
         self.rate_reset = None          # epoch seconds, from X-RateLimit-Reset
         self.bad_credentials = False    # GitHub answered 401 to this token
@@ -196,7 +197,15 @@ class Client(object):
         url = "%s/repos/%s/contents/%s" % (GITHUB_API, slug, urllib.parse.quote(path))
         if ref:
             url += "?ref=" + urllib.parse.quote(ref, safe="")
-        return self._icerik(url)
+        # The release and licence checks both read the manifests; asking
+        # twice would spend the 60-an-hour anonymous budget for nothing. Only
+        # a definite answer is kept, so a timeout is still asked again.
+        if url in self._dosyalar:
+            return self._dosyalar[url]
+        sonuc = self._icerik(url)
+        if sonuc[1]:
+            self._dosyalar[url] = sonuc
+        return sonuc
 
     def _icerik(self, url):
         veri, bilinen = self.json(url, auth=True)

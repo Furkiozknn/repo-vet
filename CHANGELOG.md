@@ -9,6 +9,24 @@ Every number here is measured. An unmeasured claim does not go in this file.
 
 ## [Unreleased]
 
+### Added: the `license` check
+
+- **`license`: the manifest, the README badge and the LICENSE file must name
+  the same licence.** `pyproject.toml` (`license` and `License ::`
+  classifiers), `package.json` and `Cargo.toml` are compared with the licence
+  GitHub detects, and so is a static shields.io licence badge. A different
+  licence *family* (MIT against Apache-2.0) is an error. A declared licence
+  with no LICENSE or COPYING file at the root is a warning. A licence GitHub
+  cannot identify (`NOASSERTION`), an unknown name, or a dynamic
+  `github/license` badge is never judged. One file per licence
+  (`LICENSE-MIT`, `LICENSE-APACHE`) counts as a dual licence, and several
+  badges are read together. The first corpus run called `clap-rs/clap`'s MIT
+  badge wrong for exactly that reason; the run after the fix reports nothing
+  across the 29 repositories. `tests/test_license.py`, 21 tests.
+- The client keeps a file it has read: the release and licence checks share
+  `pyproject.toml` and `package.json`. A full run (`--skip web`) now costs 6
+  to 9 GitHub requests (psf/requests 6, BurntSushi/ripgrep 6,
+  Furkiozknn/repo-vet 8, expressjs/express 9; measured 2026-10-15).
 First-run experience (no exit code or output contract changed), and the install
 check now covers Rust READMEs.
 

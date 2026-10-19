@@ -56,6 +56,7 @@ way to notice is to try them - and nobody tries their own README twice.
 | `links` | relative links and images exist in the tree | a file moved and the link stayed |
 | `badges` | a status badge points at a workflow that exists and has run | a renamed workflow makes the badge render *"no status"*, not red |
 | `release` | the release chain finished | a finished version is declared but nothing was ever tagged; the tag carrying the declared version has no Release while other tags do |
+| `license` | the manifest, the README badge and the LICENSE file name the same licence | `pyproject.toml` says MIT over an Apache-2.0 LICENSE; a licence badge for a licence the repository does not grant; a declared licence and no licence file at all |
 | `web` | outbound links still answer | 404 and 410 only — a 403 means a host declined to talk to a script, which says nothing |
 | `pages` | the advertised site is alive, and a live site is advertised | a dead homepage, or a live GitHub Pages site nobody is told about |
 
@@ -109,6 +110,16 @@ of `fastapi`), "a declared version should be tagged" (`flask` declares
 `3.2.0.dev` between releases, which is Tuesday, not a defect), and "a
 relative link must exist" (`fastapi` again). Each is now a named test.
 
+The `license` check, added on 15 October 2026, was run over the same list
+before it shipped. Its first version flagged `clap-rs/clap`'s MIT badge,
+because GitHub detects only Apache-2.0 there. clap is dual-licensed, with one
+badge and one `LICENSE-*` file per licence, so the check now reads badges
+together and counts each `LICENSE-*` file as a licence granted. After that it
+reports nothing across the twenty-nine repositories, which are healthy.
+Licences are compared by family, so "Apache 2.0", "Apache-2.0" and "Apache
+Software License" never disagree. A licence GitHub cannot identify is not
+judged.
+
 ## Install
 
 `repo-vet` is **not on PyPI yet**, so install it from this repository — both of
@@ -142,8 +153,8 @@ repo-vet OWNER/NAME --ref my-branch       # read the README on a branch, tag or 
 
 A token is optional for public repositories. `--token`, `GITHUB_TOKEN` or
 `GH_TOKEN` raises the rate limit and reaches private repositories. Without one
-GitHub allows 60 API requests an hour, and a repository costs five to seven of
-them (measured on three repositories with `--skip web`), so a `--from-file`
+GitHub allows 60 API requests an hour, and a repository costs six to nine of
+them (measured on four repositories with `--skip web`), so a `--from-file`
 list will want a token. When a limit is hit, the report says which one and
 when it resets; a token GitHub rejects is named as such rather than passed off
 as a missing repository. A GitHub request that times out or gets a 5xx is
