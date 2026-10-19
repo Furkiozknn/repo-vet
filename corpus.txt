@@ -8,10 +8,12 @@
 #
 #   repo-vet --from-file corpus.txt --skip web
 #
-# Expected, 22 September 2026: 4 findings, 1 of them an error. Every one was
-# checked by hand and is real. If a run of this file produces findings that
-# are not in that list, either a repository changed or repo-vet regressed,
-# and both are worth ten minutes.
+# Result on 22 September 2026: 4 findings, 1 of them an error, listed in
+# README.md ("Checked against repositories that disagree with each other");
+# every one was checked by hand. The Furkiozknn/repo-vet one no longer
+# appears: v0.1.0 was tagged that day. If a run of this file produces
+# findings that are not in that list, either a repository changed or
+# repo-vet regressed, and both are worth ten minutes.
 
 # Python
 psf/requests

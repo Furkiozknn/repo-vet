@@ -396,5 +396,31 @@ class ActionStep(unittest.TestCase):
             self.assertNotIn("${{", blok)
 
 
+class SdistShipsWhatTheTestsRead(unittest.TestCase):
+    """The sdist ships `tests/`, so it must also ship the files those tests
+    open from the repository root. Without `action.yml` the suite run from an
+    unpacked sdist ended in `FAILED (errors=7)`, and `twine check` did not
+    notice. hatch always puts pyproject.toml in the sdist, so this test also
+    runs there."""
+
+    def _sdist_include(self):
+        with open(os.path.join(KOK, "pyproject.toml"), encoding="utf-8") as f:
+            metin = f.read()
+        # A regex, not tomllib: the suite runs on Python 3.9 and 3.10 as well.
+        bolum = re.search(r"^\[tool\.hatch\.build\.targets\.sdist\]\n(.*?)(?=^\[|\Z)",
+                          metin, re.S | re.M)
+        self.assertIsNotNone(bolum, "no [tool.hatch.build.targets.sdist] section")
+        liste = re.search(r"^include\s*=\s*\[(.*?)\]", bolum.group(1), re.S | re.M)
+        self.assertIsNotNone(liste, "the sdist section has no include list")
+        return set(re.findall(r'"([^"]+)"', liste.group(1)))
+
+    def test_include_lists_the_tests_and_the_files_they_read(self):
+        include = self._sdist_include()
+        # tests/ itself, the package they import, action.yml (ActionStep) and
+        # README.md (ReadmeCommands in test_first_run.py).
+        for yol in ("tests", "repo_vet", "action.yml", "README.md"):
+            self.assertIn(yol, include)
+
+
 if __name__ == "__main__":                                # pragma: no cover
     unittest.main(verbosity=2)

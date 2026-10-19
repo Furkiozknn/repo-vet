@@ -7,6 +7,9 @@ dist/
 build/
 *.egg-info/
 repo-vet.json
+# vertical demo cut: raw material for the video pipeline, not part of the
+# repository (docs/TASARIM.md)
+docs/demo/demo-dikey.mp4
 
 # Sirlar asla girmesin
 .env

@@ -10,7 +10,7 @@
 uvx --from git+https://github.com/Furkiozknn/repo-vet repo-vet Furkiozknn/repo-vet
 ```
 
-Needs [`uv`](https://docs.astral.sh/uv/) and nothing else: no token for a public repository, no clone, no dependencies. Measured on 30 September 2026 with an empty uv cache: 10.0 s and 9.9 s (two runs) to fetch, build and print the version, then about 4 s for a full run without the outbound-link pass ([`docs/demo/kurulum.txt`](docs/demo/kurulum.txt), [`docs/DENETIM.md`](docs/DENETIM.md)).
+Needs [`uv`](https://docs.astral.sh/uv/) and nothing else: no token for a public repository, no clone, no dependencies. Measured on 30 September 2026 with an empty uv cache: 10.0 s and 9.9 s (two runs) to fetch, build and print the version, then 3.2-3.6 s for a full run of the installed command without the outbound-link pass ([`docs/demo/kurulum.txt`](docs/demo/kurulum.txt), [`docs/DENETIM.md`](docs/DENETIM.md)).
 
 <p align="center"><img src="docs/demo/demo.gif" alt="repo-vet run on two repositories, on a repository that does not exist, and on a pasted URL; each shown with its exit code" width="720"></p>
 
@@ -23,7 +23,7 @@ Needs [`uv`](https://docs.astral.sh/uv/) and nothing else: no token for a public
 | you renamed a workflow or moved a file and want to know what still points at the old name | the repository is on your disk and not on GitHub - it reads over the API and does not scan a folder |
 | you keep a list of repositories (`--from-file`) and want the one that rotted | you expect it to fix anything - it reports observations with their evidence and changes nothing |
 
-Exit code `0` means every check that ran passed, `1` means an error-level finding, `2` is bad usage (a wrong first command prints the right one), `3` means the repository could not be read - [the full table](#use-it).
+With the default `--fail-on error`, exit code `0` means no error-level finding (warnings alone never fail a run), `1` means an error-level finding, `2` is bad usage (a wrong first command prints the right one), `3` means the repository could not be read - [the full table](#use-it).
 
 [![CI](https://github.com/Furkiozknn/repo-vet/actions/workflows/ci.yml/badge.svg)](https://github.com/Furkiozknn/repo-vet/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/Furkiozknn/repo-vet?label=release&color=c9a961)](https://github.com/Furkiozknn/repo-vet/releases/latest)
@@ -44,7 +44,7 @@ way to notice is to try them - and nobody tries their own README twice.
 | Version | 0.2.0 on `main`; latest tag [`v0.1.0`](https://github.com/Furkiozknn/repo-vet/releases/tag/v0.1.0) |
 | Python | 3.9 – 3.14 |
 | Runtime dependencies | none |
-| Tests | 209, offline |
+| Tests | 215, offline |
 | Checked against | 29 public repositories ([`corpus.txt`](corpus.txt)) |
 | Licence | MIT |
 
@@ -175,7 +175,7 @@ asked once more; outbound links never are.
 permissions:
   contents: read
 steps:
-  - uses: Furkiozknn/repo-vet@main   # or pin a release tag or a commit SHA
+  - uses: Furkiozknn/repo-vet@main   # or a commit SHA - see below before pinning v0.1.0
     with:
       fail-on: error
 ```
@@ -189,6 +189,14 @@ does not exist turns the step red.
 When it checks the repository the workflow runs in, it reads the README **at
 the commit being tested**, so on a pull request it vets the pull request, not
 `main`. For any other repository it reads the default branch.
+
+Everything in this section describes `main` (version 0.2.0, not tagged yet).
+The only release tag, `v0.1.0`, predates it: no `ref` input and no `report`
+output, three scans per run, the default branch even on a pull request,
+`actions/setup-python`'s Python left first on the job's `PATH`,
+`repo-vet.json` written into the checkout, inputs substituted into the script
+with `${{ }}`, and exit `0` for a repository it could not read. Until a newer
+tag exists, pin `main` or a commit SHA.
 
 | Input | Default | |
 |---|---|---|
@@ -233,10 +241,10 @@ each one is a judgement this tool does not make.
 ```bash
 git clone https://github.com/Furkiozknn/repo-vet
 cd repo-vet
-PYTHONPATH=. python -m unittest discover -s tests -p "test_*.py" -v
+PYTHONPATH=. python -Werror::ResourceWarning -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-209 tests, standard library only, never touching the network: the GitHub API,
+215 tests, standard library only, never touching the network: the GitHub API,
 PyPI, npm and crates.io are all behind one small client that the tests replace
 with a dictionary. (The redirect tests start two servers on `127.0.0.1`, and the
 Action tests run its shell step under `bash`; neither leaves the machine.)
